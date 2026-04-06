@@ -15,14 +15,16 @@ export function NotificationProvider({ children }) {
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  const fetchNotifications = useCallback(async () => {
+ const fetchNotifications = useCallback(async () => {
     if (!user) return
     try {
       setLoading(true)
       const { data } = await getNotifications()
-      setNotifications(data)
+      // Make sure we always set an array
+      setNotifications(Array.isArray(data) ? data : [])
     } catch {
-      // silently fail on background polls
+      // backend not running yet — keep empty array
+      setNotifications([])
     } finally {
       setLoading(false)
     }
