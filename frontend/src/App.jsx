@@ -10,6 +10,10 @@ import DashboardPage      from './pages/dashboard/DashboardPage'
 import NotificationsPage  from './pages/notifications/NotificationsPage'
 import UserManagement     from './pages/admin/UserManagement'
 
+import TicketsPage      from './pages/tickets/TicketsPage'
+import NewTicketPage    from './pages/tickets/NewTicketPage'
+import TicketDetailPage from './pages/tickets/TicketDetailPage'
+
 // Placeholder pages for teammates
 const Placeholder = ({ label }) => (
   <div className="card text-center py-16">
@@ -70,12 +74,10 @@ export default function App() {
                   element={<Placeholder label="Member 2 — Booking Detail" />} />
 
                 {/* Member 3 — Incident Ticketing */}
-                <Route path="/tickets"
-                  element={<Placeholder label="Member 3 — Tickets" />} />
-                <Route path="/tickets/new"
-                  element={<Placeholder label="Member 3 — New Ticket" />} />
-                <Route path="/tickets/:id"
-                  element={<Placeholder label="Member 3 — Ticket Detail" />} />
+                {/* Member 3 — Incident Ticketing */}
+                <Route path="/tickets"     element={<TicketsPage />} />
+                <Route path="/tickets/new" element={<NewTicketPage />} />
+                <Route path="/tickets/:id" element={<TicketDetailPage />} />
               </Route>
             </Route>
 
