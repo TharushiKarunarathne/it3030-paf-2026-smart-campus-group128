@@ -1,0 +1,128 @@
+package com.smartcampus.service;
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.smartcampus.model.User;
+import com.smartcampus.repository.UserRepository;
+import com.smartcampus.security.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository    userRepository;
+    private final JwtUtil           jwtUtil;
+    private final PasswordEncoder   passwordEncoder;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
+
+    // Google OAuth login
+    public Map<String, Object> loginWithGoogle(String credential) throws Exception {
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+
+        GoogleIdToken idToken = verifier.verify(credential);
+        if (idToken == null) {
+            throw new RuntimeException("Invalid Google token");
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String googleId = payload.getSubject();
+        String email    = payload.getEmail();
+        String name     = (String) payload.get("name");
+        String picture  = (String) payload.get("picture");
+
+        // Find existing user or create new one
+        User user = userRepository.findByGoogleId(googleId)
+                .or(() -> userRepository.findByEmail(email))
+                .orElse(null);
+
+        if (user == null) {
+            // First time Google login — create account
+            user = User.builder()
+                    .googleId(googleId)
+                    .email(email)
+                    .name(name)
+                    .picture(picture)
+                    .role(User.Role.USER)
+                    .build();
+        } else {
+            // Update profile info
+            user.setName(name);
+            user.setPicture(picture);
+            user.setGoogleId(googleId);
+        }
+
+        user = userRepository.save(user);
+        return buildAuthResponse(user);
+    }
+
+    // Username & password login
+    public Map<String, Object> loginWithPassword(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (user.getPassword() == null ||
+                !passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Account is disabled");
+        }
+
+        return buildAuthResponse(user);
+    }
+
+    // Register with email & password (for admin to create accounts)
+    public Map<String, Object> register(String name, String email, String password) {
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email already in use");
+        }
+
+        User user = User.builder()
+                .name(name)
+                .email(email)
+                .password(passwordEncoder.encode(password))
+                .role(User.Role.USER)
+                .build();
+
+        user = userRepository.save(user);
+        return buildAuthResponse(user);
+    }
+
+    // Build response with token + user info
+    private Map<String, Object> buildAuthResponse(User user) {
+        String token = jwtUtil.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("id",      user.getId());
+        userMap.put("name",    user.getName());
+        userMap.put("email",   user.getEmail());
+        userMap.put("role",    user.getRole().name());
+        userMap.put("picture", user.getPicture());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("user",  userMap);
+
+        return response;
+    }
+}
