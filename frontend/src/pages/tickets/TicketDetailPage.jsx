@@ -24,6 +24,7 @@ const PRIORITY_STYLES = {
   HIGH:   { bg: 'bg-red-100',    text: 'text-red-700',    label: 'High' },
 }
 
+// What status transitions are allowed
 const STATUS_TRANSITIONS = {
   OPEN:        ['IN_PROGRESS', 'CLOSED'],
   IN_PROGRESS: ['RESOLVED', 'OPEN'],
@@ -55,19 +56,20 @@ export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, isAdmin, isTechnician } = useAuth()
+  const isUser = !isAdmin && !isTechnician
 
-  const [ticket, setTicket]           = useState(null)
-  const [technicians, setTechnicians] = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [comment, setComment]         = useState('')
-  const [submitting, setSubmitting]   = useState(false)
+  const [ticket, setTicket]                 = useState(null)
+  const [technicians, setTechnicians]       = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [comment, setComment]               = useState('')
+  const [submitting, setSubmitting]         = useState(false)
   const [statusLoading, setStatusLoading]   = useState(false)
   const [assignLoading, setAssignLoading]   = useState(false)
   const [imageExpanded, setImageExpanded]   = useState(false)
 
   useEffect(() => {
     fetchTicket()
-    if (isAdmin || isTechnician) fetchTechnicians()
+    if (isAdmin) fetchTechnicians()
   }, [id])
 
   const fetchTicket = async () => {
@@ -88,7 +90,7 @@ export default function TicketDetailPage() {
       const { data } = await getAllUsers()
       setTechnicians(
         Array.isArray(data)
-          ? data.filter(u => u.role === 'TECHNICIAN' || u.role === 'ADMIN')
+          ? data.filter(u => u.role === 'TECHNICIAN')
           : []
       )
     } catch {}
@@ -155,15 +157,15 @@ export default function TicketDetailPage() {
 
   if (!ticket) return null
 
-  const s = STATUS_STYLES[ticket.status]   ?? STATUS_STYLES.OPEN
+  const s = STATUS_STYLES[ticket.status]     ?? STATUS_STYLES.OPEN
   const p = PRIORITY_STYLES[ticket.priority] ?? PRIORITY_STYLES.MEDIUM
-  const canManage = isAdmin || isTechnician
-  const isOwner   = ticket.reportedById === user?.id
+  const isOwner    = ticket.reportedById === user?.id
+  const canManage  = isAdmin || isTechnician  // can change status
+  const isAssigned = ticket.assignedToId === user?.id
 
   return (
     <div className="max-w-3xl mx-auto">
 
-      {/* Back */}
       <button
         onClick={() => navigate('/tickets')}
         className="text-sm text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1"
@@ -181,17 +183,18 @@ export default function TicketDetailPage() {
               {ticket.category && (
                 <span className="badge bg-gray-100 text-gray-600">{ticket.category}</span>
               )}
+              {/* Show technician their assignment status */}
+              {isTechnician && isAssigned && (
+                <span className="badge bg-blue-100 text-blue-700">📌 Assigned to you</span>
+              )}
             </div>
             <h1 className="text-xl font-bold text-gray-900">{ticket.title}</h1>
           </div>
-
-          {/* Ticket ID */}
           <span className="text-xs text-gray-400 flex-shrink-0">
             #{ticket.id?.slice(-6).toUpperCase()}
           </span>
         </div>
 
-        {/* Meta info */}
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-gray-500">
           <div>
             <p className="font-medium text-gray-700 mb-0.5">Reported by</p>
@@ -211,7 +214,6 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Assigned technician */}
         {ticket.assignedToName && (
           <div className="mt-3 flex items-center gap-2 text-xs">
             <span className="text-gray-500">Assigned to:</span>
@@ -227,7 +229,6 @@ export default function TicketDetailPage() {
         {/* Left — description + image + comments */}
         <div className="md:col-span-2 space-y-4">
 
-          {/* Description */}
           <div className="card">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Description</h2>
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -235,7 +236,6 @@ export default function TicketDetailPage() {
             </p>
           </div>
 
-          {/* Image attachment */}
           {ticket.imageUrl && (
             <div className="card">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Attachment</h2>
@@ -248,14 +248,11 @@ export default function TicketDetailPage() {
                   alt="Ticket attachment"
                   className="w-full max-h-64 object-cover hover:opacity-90 transition-opacity"
                 />
-                <p className="text-xs text-center text-gray-400 py-1">
-                  Click to enlarge
-                </p>
+                <p className="text-xs text-center text-gray-400 py-1">Click to enlarge</p>
               </div>
             </div>
           )}
 
-          {/* Expanded image modal */}
           {imageExpanded && (
             <div
               className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
@@ -269,9 +266,7 @@ export default function TicketDetailPage() {
               <button
                 className="absolute top-4 right-4 text-white text-2xl font-bold hover:opacity-70"
                 onClick={() => setImageExpanded(false)}
-              >
-                ✕
-              </button>
+              >✕</button>
             </div>
           )}
 
@@ -281,36 +276,34 @@ export default function TicketDetailPage() {
               Comments ({ticket.comments?.length ?? 0})
             </h2>
 
-            {/* Comment list */}
             <div className="space-y-3 mb-4">
               {(!ticket.comments || ticket.comments.length === 0) ? (
                 <p className="text-sm text-gray-400 text-center py-4">
-                  No comments yet. Be the first to add one.
+                  No comments yet.
                 </p>
               ) : (
                 ticket.comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex gap-3 items-start group"
-                  >
-                    {/* Avatar */}
+                  <div key={c.id} className="flex gap-3 items-start group">
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100
                                     flex items-center justify-center text-primary-700
                                     text-xs font-semibold">
                       {c.authorName?.[0]?.toUpperCase() ?? '?'}
                     </div>
-
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-gray-900">
-                            {c.authorName}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {timeAgo(c.createdAt)}
-                          </span>
+                          <span className="text-xs font-medium text-gray-900">{c.authorName}</span>
+                          <span className="text-xs text-gray-400">{timeAgo(c.createdAt)}</span>
+                          {/* Show role badge on comments */}
+                          {c.authorRole && (
+                            <span className={`badge text-[10px]
+                              ${c.authorRole === 'ADMIN'      ? 'bg-purple-100 text-purple-700' :
+                                c.authorRole === 'TECHNICIAN' ? 'bg-blue-100 text-blue-700' :
+                                'bg-gray-100 text-gray-500'}`}>
+                              {c.authorRole}
+                            </span>
+                          )}
                         </div>
-                        {/* Delete — own comment or admin */}
                         {(c.authorId === user?.id || isAdmin) && (
                           <button
                             onClick={() => handleDeleteComment(c.id)}
@@ -330,7 +323,6 @@ export default function TicketDetailPage() {
               )}
             </div>
 
-            {/* Add comment */}
             <div className="border-t border-gray-100 pt-4">
               <textarea
                 className="input resize-none mb-2"
@@ -356,15 +348,27 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Right — management panel */}
+        {/* Right — role-based management panel */}
         <div className="space-y-4">
 
-          {/* Status change — admin/technician only */}
-          {canManage && (
+          {/* USER — read only panel */}
+          {isUser && (
+            <div className="card text-center py-6">
+              <p className="text-3xl mb-2">📋</p>
+              <p className="text-sm font-medium text-gray-700">Your Ticket</p>
+              <p className="text-xs text-gray-400 mt-1">
+                A technician will be assigned to resolve this issue.
+              </p>
+            </div>
+          )}
+
+          {/* TECHNICIAN — can update status only */}
+          {isTechnician && (
             <div className="card">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">
-                Update Status
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-1">Update Status</h2>
+              <p className="text-xs text-gray-400 mb-3">
+                Move this ticket along as you work on it.
+              </p>
               <div className="space-y-2">
                 {(STATUS_TRANSITIONS[ticket.status] ?? []).map((nextStatus) => {
                   const ns = STATUS_STYLES[nextStatus]
@@ -373,10 +377,9 @@ export default function TicketDetailPage() {
                       key={nextStatus}
                       onClick={() => handleStatusChange(nextStatus)}
                       disabled={statusLoading}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm
-                                  font-medium border transition-colors
-                                  ${ns.bg} ${ns.text} border-transparent
-                                  hover:opacity-80 disabled:opacity-50`}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium
+                                  border transition-colors ${ns.bg} ${ns.text}
+                                  border-transparent hover:opacity-80 disabled:opacity-50`}
                     >
                       {statusLoading ? 'Updating...' : `→ Mark as ${ns.label}`}
                     </button>
@@ -386,32 +389,55 @@ export default function TicketDetailPage() {
             </div>
           )}
 
-          {/* Assign technician — admin only */}
+          {/* ADMIN — can update status AND assign technician */}
           {isAdmin && (
-            <div className="card">
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">
-                Assign Technician
-              </h2>
-              <select
-                className="input text-sm"
-                value={ticket.assignedToId ?? ''}
-                disabled={assignLoading}
-                onChange={(e) => handleAssign(e.target.value)}
-              >
-                <option value="">— Unassigned —</option>
-                {technicians.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.role})
-                  </option>
-                ))}
-              </select>
-              {assignLoading && (
-                <p className="text-xs text-gray-400 mt-1">Assigning...</p>
-              )}
-            </div>
+            <>
+              <div className="card">
+                <h2 className="text-sm font-semibold text-gray-900 mb-1">Update Status</h2>
+                <p className="text-xs text-gray-400 mb-3">Change the ticket status.</p>
+                <div className="space-y-2">
+                  {(STATUS_TRANSITIONS[ticket.status] ?? []).map((nextStatus) => {
+                    const ns = STATUS_STYLES[nextStatus]
+                    return (
+                      <button
+                        key={nextStatus}
+                        onClick={() => handleStatusChange(nextStatus)}
+                        disabled={statusLoading}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium
+                                    border transition-colors ${ns.bg} ${ns.text}
+                                    border-transparent hover:opacity-80 disabled:opacity-50`}
+                      >
+                        {statusLoading ? 'Updating...' : `→ Mark as ${ns.label}`}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="card">
+                <h2 className="text-sm font-semibold text-gray-900 mb-1">Assign Technician</h2>
+                <p className="text-xs text-gray-400 mb-3">
+                  Assign a technician to handle this ticket.
+                </p>
+                <select
+                  className="input text-sm"
+                  value={ticket.assignedToId ?? ''}
+                  disabled={assignLoading}
+                  onChange={(e) => handleAssign(e.target.value)}
+                >
+                  <option value="">— Unassigned —</option>
+                  {technicians.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                {assignLoading && (
+                  <p className="text-xs text-gray-400 mt-1">Assigning...</p>
+                )}
+              </div>
+            </>
           )}
 
-          {/* Ticket info summary */}
+          {/* Ticket info — all roles */}
           <div className="card text-xs text-gray-500 space-y-2">
             <h2 className="text-sm font-semibold text-gray-900 mb-1">Ticket Info</h2>
             <div className="flex justify-between">
@@ -432,18 +458,16 @@ export default function TicketDetailPage() {
             </div>
             <div className="flex justify-between">
               <span>Comments</span>
-              <span className="font-medium text-gray-700">
-                {ticket.comments?.length ?? 0}
-              </span>
+              <span className="font-medium text-gray-700">{ticket.comments?.length ?? 0}</span>
             </div>
           </div>
 
-          {/* Delete ticket — owner or admin */}
-          {(isOwner || isAdmin) && ticket.status === 'OPEN' && (
+          {/* Delete — only ticket owner when status is OPEN */}
+          {isOwner && ticket.status === 'OPEN' && (
             <button
               onClick={() => {
                 if (window.confirm('Are you sure you want to delete this ticket?')) {
-                  toast.error('Delete endpoint not yet connected to backend.')
+                  toast.error('Delete not yet connected to backend.')
                 }
               }}
               className="btn-danger w-full text-sm"

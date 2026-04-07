@@ -33,25 +33,40 @@ function timeAgo(dateStr) {
 }
 
 export default function TicketsPage() {
-  const { isAdmin, isTechnician } = useAuth()
+  const { user, isAdmin, isTechnician } = useAuth()
+  const isUser = !isAdmin && !isTechnician
   const [searchParams] = useSearchParams()
 
-  const [tickets, setTickets]       = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [search, setSearch]         = useState('')
-  const [statusFilter, setStatus]   = useState(searchParams.get('status') ?? 'All')
-  const [categoryFilter, setCategory] = useState('All')
-  const [priorityFilter, setPriority] = useState('All')
+  const [tickets, setTickets]           = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [search, setSearch]             = useState('')
+  const [statusFilter, setStatus]       = useState(searchParams.get('status') ?? 'All')
+  const [categoryFilter, setCategory]   = useState('All')
+  const [priorityFilter, setPriority]   = useState('All')
 
-  useEffect(() => {
-    fetchTickets()
-  }, [])
+  useEffect(() => { fetchTickets() }, [])
 
   const fetchTickets = async () => {
     try {
       setLoading(true)
       const { data } = await getTickets()
-      setTickets(Array.isArray(data) ? data : [])
+      const all = Array.isArray(data) ? data : []
+
+      // Filter by role on the frontend
+      // USER    → only their own tickets
+      // ADMIN   → tickets they created OR assigned to them
+      // TECH    → all tickets
+      let visible = all
+      if (isUser) {
+        visible = all.filter(t => t.reportedById === user?.id)
+      } else if (isAdmin) {
+        visible = all.filter(t =>
+          t.reportedById === user?.id || t.assignedToId === user?.id
+        )
+      }
+      // technician sees all — no filter
+
+      setTickets(visible)
     } catch {
       toast.error('Failed to load tickets.')
       setTickets([])
@@ -63,26 +78,67 @@ export default function TicketsPage() {
   const filtered = tickets.filter((t) => {
     const matchSearch   = t.title?.toLowerCase().includes(search.toLowerCase()) ||
                           t.location?.toLowerCase().includes(search.toLowerCase())
-    const matchStatus   = statusFilter === 'All'   || t.status === statusFilter
+    const matchStatus   = statusFilter   === 'All' || t.status   === statusFilter
     const matchCategory = categoryFilter === 'All' || t.category === categoryFilter
     const matchPriority = priorityFilter === 'All' || t.priority === priorityFilter
     return matchSearch && matchStatus && matchCategory && matchPriority
   })
+
+  // Role-specific heading
+  const heading = isTechnician
+    ? 'All Incident Tickets'
+    : isAdmin
+    ? 'My Tickets'
+    : 'My Reported Issues'
+
+  const subtext = isTechnician
+    ? `${tickets.length} total · ${tickets.filter(t => t.status === 'OPEN').length} open`
+    : isAdmin
+    ? 'Tickets you submitted or that are assigned to you'
+    : 'Issues you have reported'
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Incident Tickets</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {tickets.length} total · {tickets.filter(t => t.status === 'OPEN').length} open
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">{heading}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{subtext}</p>
         </div>
-        <Link to="/tickets/new" className="btn-primary">
-          + Report Issue
-        </Link>
+
+        {/* Only USER and ADMIN can create tickets */}
+        {!isTechnician && (
+          <Link to="/tickets/new" className="btn-primary">
+            + Report Issue
+          </Link>
+        )}
       </div>
+
+      {/* Technician info banner */}
+      {isTechnician && (
+        <div className="card border-blue-200 bg-blue-50/40 mb-4 flex items-center gap-3 p-4">
+          <span className="text-2xl">🔧</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">Technician View</p>
+            <p className="text-xs text-blue-600">
+              You can see all tickets. Update status to track your progress.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Admin info banner */}
+      {isAdmin && (
+        <div className="card border-purple-200 bg-purple-50/40 mb-4 flex items-center gap-3 p-4">
+          <span className="text-2xl">👑</span>
+          <div>
+            <p className="text-sm font-semibold text-purple-900">Admin View</p>
+            <p className="text-xs text-purple-600">
+              Showing tickets you created or that are assigned to you.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="card mb-6 p-4">
@@ -93,32 +149,19 @@ export default function TicketsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-
-          <select
-            className="input"
-            value={statusFilter}
-            onChange={(e) => setStatus(e.target.value)}
-          >
+          <select className="input" value={statusFilter} onChange={(e) => setStatus(e.target.value)}>
             {STATUSES.map(s => (
-              <option key={s} value={s}>{s === 'All' ? 'All statuses' : STATUS_STYLES[s]?.label}</option>
+              <option key={s} value={s}>
+                {s === 'All' ? 'All statuses' : STATUS_STYLES[s]?.label}
+              </option>
             ))}
           </select>
-
-          <select
-            className="input"
-            value={categoryFilter}
-            onChange={(e) => setCategory(e.target.value)}
-          >
+          <select className="input" value={categoryFilter} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORIES.map(c => (
               <option key={c} value={c}>{c === 'All' ? 'All categories' : c}</option>
             ))}
           </select>
-
-          <select
-            className="input"
-            value={priorityFilter}
-            onChange={(e) => setPriority(e.target.value)}
-          >
+          <select className="input" value={priorityFilter} onChange={(e) => setPriority(e.target.value)}>
             <option value="All">All priorities</option>
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
@@ -134,19 +177,23 @@ export default function TicketsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="card text-center py-16">
-          <p className="text-4xl mb-3">🎉</p>
-          <h2 className="text-lg font-semibold text-gray-700">No tickets found</h2>
+          <p className="text-4xl mb-3">{tickets.length === 0 ? '🎉' : '🔍'}</p>
+          <h2 className="text-lg font-semibold text-gray-700">
+            {tickets.length === 0 ? 'No issues reported yet' : 'No tickets match your filters'}
+          </h2>
           <p className="text-sm text-gray-400 mt-1">
-            {tickets.length === 0 ? 'No issues reported yet.' : 'Try adjusting your filters.'}
+            {tickets.length === 0 && !isTechnician ? 'Everything looks good!' : 'Try adjusting your filters.'}
           </p>
-          <Link to="/tickets/new" className="btn-primary mt-4 inline-block">
-            Report an Issue
-          </Link>
+          {!isTechnician && tickets.length === 0 && (
+            <Link to="/tickets/new" className="btn-primary mt-4 inline-block">
+              Report an Issue
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
           {filtered.map((ticket) => {
-            const s = STATUS_STYLES[ticket.status]   ?? STATUS_STYLES.OPEN
+            const s = STATUS_STYLES[ticket.status]     ?? STATUS_STYLES.OPEN
             const p = PRIORITY_STYLES[ticket.priority] ?? PRIORITY_STYLES.MEDIUM
             return (
               <Link
@@ -154,9 +201,9 @@ export default function TicketsPage() {
                 to={`/tickets/${ticket.id}`}
                 className="card hover:shadow-md transition-shadow p-4 flex gap-4 items-start block"
               >
-                {/* Priority indicator */}
+                {/* Priority bar */}
                 <div className={`flex-shrink-0 w-1 self-stretch rounded-full
-                  ${ticket.priority === 'HIGH' ? 'bg-red-500' :
+                  ${ticket.priority === 'HIGH'   ? 'bg-red-500' :
                     ticket.priority === 'MEDIUM' ? 'bg-orange-400' : 'bg-blue-400'}`} />
 
                 <div className="flex-1 min-w-0">
@@ -175,18 +222,23 @@ export default function TicketsPage() {
                   </p>
 
                   <div className="flex items-center gap-4 mt-2 text-xs text-gray-400 flex-wrap">
-                    {ticket.category && (
-                      <span>📁 {ticket.category}</span>
-                    )}
-                    {ticket.location && (
-                      <span>📍 {ticket.location}</span>
-                    )}
-                    {(isAdmin || isTechnician) && ticket.reportedByName && (
+                    {ticket.category && <span>📁 {ticket.category}</span>}
+                    {ticket.location && <span>📍 {ticket.location}</span>}
+
+                    {/* Technician sees who reported it */}
+                    {isTechnician && ticket.reportedByName && (
                       <span>👤 {ticket.reportedByName}</span>
                     )}
+
+                    {/* Show assigned technician */}
+                    {ticket.assignedToName && (
+                      <span>🔧 {ticket.assignedToName}</span>
+                    )}
+
                     <span>🕐 {timeAgo(ticket.createdAt)}</span>
+
                     {ticket.commentCount > 0 && (
-                      <span>💬 {ticket.commentCount} comment{ticket.commentCount !== 1 ? 's' : ''}</span>
+                      <span>💬 {ticket.commentCount}</span>
                     )}
                   </div>
                 </div>
