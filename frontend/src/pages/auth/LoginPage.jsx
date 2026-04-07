@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth'
 
 export default function LoginPage() {
   const { user, loginWithGoogle, loginWithPassword } = useAuth()
+  console.log('loginWithPassword:', loginWithPassword) // add this
   const navigate = useNavigate()
   const location = useLocation()
   const from     = location.state?.from?.pathname ?? '/dashboard'
@@ -31,6 +32,7 @@ export default function LoginPage() {
 
   const handlePasswordLogin = async (e) => {
     e.preventDefault()
+    console.log('Login submitted', email, password) // add this line
     setError('')
 
     if (!email || !password) {

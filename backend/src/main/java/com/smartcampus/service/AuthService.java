@@ -33,8 +33,9 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Google OAuth login
-    public Map<String, Object> loginWithGoogle(String credential) throws Exception {
+   // Google OAuth login
+public Map<String, Object> loginWithGoogle(String credential) throws Exception {
+    try {
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(Collections.singletonList(googleClientId))
@@ -71,7 +72,13 @@ public class AuthService {
 
         user = userRepository.save(user);
         return buildAuthResponse(user);
+
+    } catch (RuntimeException e) {
+        throw e;
+    } catch (Exception e) {
+        throw new RuntimeException("Google login failed: " + e.getMessage());
     }
+}
 
     // Username & password login
     public Map<String, Object> loginWithPassword(String email, String password) {
