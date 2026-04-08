@@ -12,6 +12,12 @@ export const getBookingById = (id) =>
 export const getBookingsByResource = (resourceId) =>
   api.get(`/bookings/resource/${resourceId}`)
 
+export const verifyBooking = (id) =>
+  api.get(`/bookings/verify/${id}`)
+
+export const checkInBooking = (id) =>
+  api.patch(`/bookings/${id}/checkin`)
+
 export const createBooking = (data) =>
   api.post('/bookings', data)
 

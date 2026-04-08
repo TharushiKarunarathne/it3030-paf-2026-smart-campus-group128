@@ -20,7 +20,6 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
-    // Helper — check if the logged-in user is admin
     private boolean isAdmin(User user) {
         return user != null &&
                user.getRole() != null &&
@@ -67,7 +66,6 @@ public class BookingController {
             Booking booking = bookingService.getBookingById(id);
 
             boolean owner = booking.getUserId().equals(user.getId());
-
             if (!isAdmin(user) && !owner) {
                 return ResponseEntity.status(403)
                     .body(Map.of("error", "Access denied"));
@@ -94,7 +92,20 @@ public class BookingController {
         }
     }
 
-    // POST /api/bookings — any logged-in user including admin
+    // GET /api/bookings/verify/{id} — PUBLIC, no auth required
+    // Called when QR code is scanned
+    @GetMapping("/verify/{id}")
+    public ResponseEntity<?> verifyBooking(@PathVariable String id) {
+        try {
+            Booking booking = bookingService.getBookingById(id);
+            return ResponseEntity.ok(booking);
+        } catch (Exception e) {
+            return ResponseEntity.status(404)
+                .body(Map.of("error", "Booking not found"));
+        }
+    }
+
+    // POST /api/bookings — any logged-in user
     @PostMapping
     public ResponseEntity<?> createBooking(
             @RequestBody Map<String, Object> body,
@@ -115,7 +126,6 @@ public class BookingController {
             @RequestBody Map<String, String> body,
             @AuthenticationPrincipal User user) {
 
-        // Manual admin check — no @PreAuthorize needed
         if (!isAdmin(user)) {
             return ResponseEntity.status(403)
                 .body(Map.of("error", "Admin access required"));
@@ -140,7 +150,20 @@ public class BookingController {
         }
     }
 
-    // DELETE /api/bookings/{id} — owner or admin
+    // PATCH /api/bookings/{id}/checkin — PUBLIC, no auth required
+    // Called from QR verification screen
+    @PatchMapping("/{id}/checkin")
+    public ResponseEntity<?> checkIn(@PathVariable String id) {
+        try {
+            Booking updated = bookingService.checkIn(id);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // DELETE /api/bookings/{id}
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBooking(
             @PathVariable String id,

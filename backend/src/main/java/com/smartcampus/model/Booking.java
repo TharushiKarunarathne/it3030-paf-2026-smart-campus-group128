@@ -14,28 +14,24 @@ public class Booking {
     @Id
     private String id;
 
-    // Resource info
     @Indexed
     private String resourceId;
-    private String resourceName;   // snapshot — stays even if resource renamed
-    private String resourceType;   // snapshot for display
+    private String resourceName;
+    private String resourceType;
 
-    // User info
     @Indexed
     private String userId;
-    private String userName;       // snapshot
-    private String userEmail;      // snapshot
+    private String userName;
+    private String userEmail;
 
-    // Time slot
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-
-    // Details
     private String purpose;
 
-    // Status
     private BookingStatus status = BookingStatus.PENDING;
-    private String adminNote;      // rejection reason or approval note
+    private String adminNote;
+
+    private LocalDateTime checkedInAt;
 
     @CreatedDate
     private LocalDateTime createdAt;
@@ -48,7 +44,8 @@ public class Booking {
     public enum BookingStatus {
         PENDING,
         APPROVED,
-        REJECTED
+        REJECTED,
+        CHECKED_IN   // ← new
     }
 
     // ── Constructors ───────────────────────────────────
@@ -69,6 +66,7 @@ public class Booking {
     public String getPurpose()             { return purpose; }
     public BookingStatus getStatus()       { return status; }
     public String getAdminNote()           { return adminNote; }
+    public LocalDateTime getCheckedInAt()  { return checkedInAt; }
     public LocalDateTime getCreatedAt()    { return createdAt; }
     public LocalDateTime getUpdatedAt()    { return updatedAt; }
 
@@ -86,6 +84,7 @@ public class Booking {
     public void setPurpose(String purpose)              { this.purpose = purpose; }
     public void setStatus(BookingStatus status)         { this.status = status; }
     public void setAdminNote(String adminNote)          { this.adminNote = adminNote; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
     public void setCreatedAt(LocalDateTime createdAt)   { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt)   { this.updatedAt = updatedAt; }
 }

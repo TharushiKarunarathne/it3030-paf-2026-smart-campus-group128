@@ -115,14 +115,15 @@ public class BookingService {
             throw new RuntimeException("Invalid status: " + status);
         }
 
-        // ── Revert to PENDING — always allowed for admin ──────
+        // Revert to PENDING — always allowed for admin
         if (newStatus == Booking.BookingStatus.PENDING) {
             booking.setStatus(Booking.BookingStatus.PENDING);
             booking.setAdminNote(null);
+            booking.setCheckedInAt(null);
             return bookingRepository.save(booking);
         }
 
-        // ── Normal flow — booking must currently be PENDING ───
+        // Normal flow — booking must be PENDING
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new RuntimeException(
                 "This booking is already " + booking.getStatus() +
@@ -130,13 +131,11 @@ public class BookingService {
             );
         }
 
-        // Rejection must have a reason
         if (newStatus == Booking.BookingStatus.REJECTED &&
             (adminNote == null || adminNote.isBlank())) {
             throw new RuntimeException("Please provide a reason for rejection");
         }
 
-        // Re-check conflicts before approving
         if (newStatus == Booking.BookingStatus.APPROVED) {
             List<Booking> conflicts = bookingRepository.findConflictingBookings(
                 booking.getResourceId(),
@@ -155,6 +154,25 @@ public class BookingService {
         if (adminNote != null && !adminNote.isBlank()) {
             booking.setAdminNote(adminNote);
         }
+
+        return bookingRepository.save(booking);
+    }
+
+    // ── Check In ───────────────────────────────────────
+    // Called from the QR verification screen
+    // No auth required — public endpoint
+    public Booking checkIn(String id) {
+        Booking booking = getBookingById(id);
+
+        // Can only check in APPROVED bookings
+        if (booking.getStatus() != Booking.BookingStatus.APPROVED) {
+            throw new RuntimeException(
+                "Cannot check in — booking status is " + booking.getStatus()
+            );
+        }
+
+        booking.setStatus(Booking.BookingStatus.CHECKED_IN);
+        booking.setCheckedInAt(LocalDateTime.now());
 
         return bookingRepository.save(booking);
     }

@@ -10,9 +10,10 @@ import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 const STATUS_CONFIG = {
-  PENDING:  { label: 'Pending',  dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  APPROVED: { label: 'Approved', dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-200' },
-  REJECTED: { label: 'Rejected', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
+  PENDING:    { label: 'Pending',    dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  APPROVED:   { label: 'Approved',   dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-200' },
+  REJECTED:   { label: 'Rejected',   dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
+  CHECKED_IN: { label: 'Checked In', dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200' },
 }
 
 const TYPE_ICON = {
@@ -33,7 +34,7 @@ const TYPE_BG = {
   LIBRARY_STUDY_ROOM: 'bg-teal-50',
 }
 
-const TABS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED']
+const TABS = ['ALL', 'PENDING', 'APPROVED', 'CHECKED_IN', 'REJECTED']
 
 function formatDate(dt) {
   return new Date(dt).toLocaleDateString('en-GB', {
@@ -42,16 +43,24 @@ function formatDate(dt) {
 }
 
 function formatTime(dt) {
-  return new Date(dt).toLocaleTimeString('en-GB', {
-    hour: '2-digit', minute: '2-digit',
-  })
+  if (!dt) return ''
+  const [, timePart] = dt.split('T')
+  const [h, m] = timePart.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayH = hour % 12 === 0 ? 12 : hour % 12
+  return `${String(displayH).padStart(2, '0')}:${m} ${ampm}`
 }
 
 function calcDuration(start, end) {
-  const mins = (new Date(end) - new Date(start)) / 60000
+  if (!start || !end) return ''
+  const [, st] = start.split('T')
+  const [, et] = end.split('T')
+  const [sh, sm] = st.split(':').map(Number)
+  const [eh, em] = et.split(':').map(Number)
+  const mins = (eh * 60 + em) - (sh * 60 + sm)
   if (mins < 60) return `${mins}m`
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
+  const h = Math.floor(mins / 60), m = mins % 60
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
@@ -93,7 +102,7 @@ export default function BookingsPage() {
   const [revertModal, setRevertModal]     = useState(false)
   const [revertBooking, setRevertBooking] = useState(null)
 
-  // Delete modal — renamed to deleteTarget to avoid conflict with imported deleteBooking function
+  // Delete modal — REJECTED bookings only
   const [deleteModal, setDeleteModal]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
@@ -189,7 +198,6 @@ export default function BookingsPage() {
     }
   }
 
-  // deleteTarget used here — no conflict with imported deleteBooking function
   const handleDeleteConfirm = async () => {
     try {
       setActioning(true)
@@ -205,7 +213,6 @@ export default function BookingsPage() {
     }
   }
 
-  // User cancel own PENDING booking
   const handleCancel = async (id) => {
     try {
       await deleteBooking(id)
@@ -217,9 +224,10 @@ export default function BookingsPage() {
   }
 
   const counts = {
-    PENDING:  bookings.filter(b => b.status === 'PENDING').length,
-    APPROVED: bookings.filter(b => b.status === 'APPROVED').length,
-    REJECTED: bookings.filter(b => b.status === 'REJECTED').length,
+    PENDING:    bookings.filter(b => b.status === 'PENDING').length,
+    APPROVED:   bookings.filter(b => b.status === 'APPROVED').length,
+    REJECTED:   bookings.filter(b => b.status === 'REJECTED').length,
+    CHECKED_IN: bookings.filter(b => b.status === 'CHECKED_IN').length,
   }
 
   const filtered = bookings
@@ -261,12 +269,13 @@ export default function BookingsPage() {
               + New Booking
             </Link>
           </div>
-          <div className="flex gap-8">
+          <div className="flex gap-6 flex-wrap">
             {[
-              { label: 'Pending',  count: counts.PENDING,  color: 'text-amber-300' },
-              { label: 'Approved', count: counts.APPROVED, color: 'text-green-300' },
-              { label: 'Rejected', count: counts.REJECTED, color: 'text-red-300' },
-              { label: 'Total',    count: bookings.length, color: 'text-white' },
+              { label: 'Pending',    count: counts.PENDING,    color: 'text-amber-300' },
+              { label: 'Approved',   count: counts.APPROVED,   color: 'text-green-300' },
+              { label: 'Checked In', count: counts.CHECKED_IN, color: 'text-blue-300' },
+              { label: 'Rejected',   count: counts.REJECTED,   color: 'text-red-300' },
+              { label: 'Total',      count: bookings.length,   color: 'text-white' },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
@@ -290,7 +299,7 @@ export default function BookingsPage() {
       )}
 
       {/* ── Tabs ──────────────────────────────────────── */}
-      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {TABS.map(t => (
           <button
             key={t}
@@ -304,9 +313,10 @@ export default function BookingsPage() {
             {t === 'ALL' ? 'All' : STATUS_CONFIG[t].label}
             {t !== 'ALL' && counts[t] > 0 && (
               <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs
-                ${t === 'PENDING'  ? 'bg-amber-100 text-amber-700'  : ''}
-                ${t === 'APPROVED' ? 'bg-green-100 text-green-700'  : ''}
-                ${t === 'REJECTED' ? 'bg-red-100   text-red-700'    : ''}
+                ${t === 'PENDING'    ? 'bg-amber-100 text-amber-700'  : ''}
+                ${t === 'APPROVED'   ? 'bg-green-100 text-green-700'  : ''}
+                ${t === 'REJECTED'   ? 'bg-red-100   text-red-700'    : ''}
+                ${t === 'CHECKED_IN' ? 'bg-blue-100  text-blue-700'   : ''}
               `}>
                 {counts[t]}
               </span>
@@ -362,8 +372,9 @@ export default function BookingsPage() {
                            hover:shadow-md transition-all duration-200">
 
                 <div className={`h-0.5 rounded-t-2xl ${
-                  booking.status === 'APPROVED' ? 'bg-green-400' :
-                  booking.status === 'REJECTED' ? 'bg-red-400'   : 'bg-amber-400'
+                  booking.status === 'APPROVED'   ? 'bg-green-400' :
+                  booking.status === 'REJECTED'   ? 'bg-red-400'   :
+                  booking.status === 'CHECKED_IN' ? 'bg-blue-400'  : 'bg-amber-400'
                 }`} />
 
                 <div className="p-4">
@@ -410,6 +421,13 @@ export default function BookingsPage() {
                           Reason: {booking.adminNote}
                         </p>
                       )}
+
+                      {/* Checked in success message */}
+                      {booking.status === 'CHECKED_IN' && (
+                        <p className="text-xs text-blue-500 mt-0.5 font-medium">
+                          ✅ Checked in successfully
+                        </p>
+                      )}
                     </div>
 
                     {/* ── Actions ───────────────────── */}
@@ -447,8 +465,12 @@ export default function BookingsPage() {
                         </>
                       )}
 
-                      {/* Admin APPROVED or REJECTED — revert */}
-                      {isAdmin && booking.status !== 'PENDING' && (
+                      {/* Admin APPROVED or REJECTED only — revert
+                          CHECKED_IN cannot be reverted */}
+                      {isAdmin && (
+                        booking.status === 'APPROVED' ||
+                        booking.status === 'REJECTED'
+                      ) && (
                         <button
                           onClick={() => openRevert(booking)}
                           disabled={actioning}
@@ -460,7 +482,8 @@ export default function BookingsPage() {
                         </button>
                       )}
 
-                      {/* Admin — delete REJECTED bookings only */}
+                      {/* Admin — delete REJECTED bookings only
+                          cannot delete PENDING, APPROVED or CHECKED_IN */}
                       {isAdmin && booking.status === 'REJECTED' && (
                         <button
                           onClick={() => openDelete(booking)}

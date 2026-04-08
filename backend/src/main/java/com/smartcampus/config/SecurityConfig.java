@@ -45,6 +45,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,    "/api/resources/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH,  "/api/resources/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/resources/**").authenticated()
+                
+                // QR verification — public, no login needed
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                    "/api/bookings/verify/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH,
+                    "/api/bookings/*/checkin").permitAll()
 
                 // Bookings — all methods explicitly allowed for authenticated users
                 // role checks are handled manually inside BookingController
