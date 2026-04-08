@@ -1,10 +1,12 @@
 package com.smartcampus.service;
 
 import com.smartcampus.model.Booking;
+import com.smartcampus.model.Notification;
 import com.smartcampus.model.Resource;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.BookingRepository;
 import com.smartcampus.repository.ResourceRepository;
+import com.smartcampus.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -16,11 +18,17 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public BookingService(BookingRepository bookingRepository,
-                          ResourceRepository resourceRepository) {
-        this.bookingRepository  = bookingRepository;
-        this.resourceRepository = resourceRepository;
+                          ResourceRepository resourceRepository,
+                          UserRepository userRepository,
+                          NotificationService notificationService) {
+        this.bookingRepository   = bookingRepository;
+        this.resourceRepository  = resourceRepository;
+        this.userRepository      = userRepository;
+        this.notificationService = notificationService;
     }
 
     public List<Booking> getMyBookings(String userId) {
@@ -102,7 +110,20 @@ public class BookingService {
         booking.setPurpose(purpose);
         booking.setStatus(Booking.BookingStatus.PENDING);
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Notify all admins about the new booking request
+        List<User> admins = userRepository.findByRole(User.Role.ADMIN);
+        for (User admin : admins) {
+            notificationService.createNotification(
+                admin.getId(),
+                "New booking request from " + user.getName() + " for \"" + resource.getName() + "\"",
+                Notification.NotificationType.BOOKING_PENDING,
+                booking.getId()
+            );
+        }
+
+        return saved;
     }
 
     public Booking updateStatus(String id, String status, String adminNote, User admin) {
@@ -119,7 +140,14 @@ public class BookingService {
         if (newStatus == Booking.BookingStatus.PENDING) {
             booking.setStatus(Booking.BookingStatus.PENDING);
             booking.setAdminNote(null);
-            return bookingRepository.save(booking);
+            Booking saved = bookingRepository.save(booking);
+            notificationService.createNotification(
+                booking.getUserId(),
+                "Your booking for \"" + booking.getResourceName() + "\" has been reverted to pending review.",
+                Notification.NotificationType.BOOKING_CANCELLED,
+                booking.getId()
+            );
+            return saved;
         }
 
         // ── Normal flow — booking must currently be PENDING ───
@@ -156,7 +184,28 @@ public class BookingService {
             booking.setAdminNote(adminNote);
         }
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        if (newStatus == Booking.BookingStatus.APPROVED) {
+            notificationService.createNotification(
+                booking.getUserId(),
+                "Your booking for \"" + booking.getResourceName() + "\" has been approved.",
+                Notification.NotificationType.BOOKING_APPROVED,
+                booking.getId()
+            );
+        } else if (newStatus == Booking.BookingStatus.REJECTED) {
+            String reason = (adminNote != null && !adminNote.isBlank())
+                ? " Reason: " + adminNote
+                : "";
+            notificationService.createNotification(
+                booking.getUserId(),
+                "Your booking for \"" + booking.getResourceName() + "\" has been rejected." + reason,
+                Notification.NotificationType.BOOKING_REJECTED,
+                booking.getId()
+            );
+        }
+
+        return saved;
     }
 
     public void deleteBooking(String id, User requestingUser) {
@@ -171,6 +220,16 @@ public class BookingService {
 
         if (!isAdmin && booking.getStatus() == Booking.BookingStatus.APPROVED)
             throw new RuntimeException("Cannot cancel an already approved booking");
+
+        // Notify the booking owner if an admin is cancelling their booking
+        if (isAdmin && !isOwner) {
+            notificationService.createNotification(
+                booking.getUserId(),
+                "Your booking for \"" + booking.getResourceName() + "\" has been cancelled by an administrator.",
+                Notification.NotificationType.BOOKING_CANCELLED,
+                booking.getId()
+            );
+        }
 
         bookingRepository.deleteById(id);
     }

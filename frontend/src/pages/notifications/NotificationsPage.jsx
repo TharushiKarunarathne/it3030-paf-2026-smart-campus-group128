@@ -5,6 +5,7 @@ import { useNotifications } from '../../hooks/useNotifications'
 const TABS = ['All', 'Unread', 'Bookings', 'Tickets']
 
 const TYPE_META = {
+  BOOKING_PENDING:    { label: 'Booking pending',    color: 'bg-orange-100 text-orange-700' },
   BOOKING_APPROVED:  { label: 'Booking approved',  color: 'bg-green-100 text-green-700' },
   BOOKING_REJECTED:  { label: 'Booking rejected',  color: 'bg-red-100 text-red-700' },
   BOOKING_CANCELLED: { label: 'Booking cancelled', color: 'bg-gray-100 text-gray-600' },

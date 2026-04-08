@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../../hooks/useNotifications'
 
 const TYPE_STYLES = {
+  BOOKING_PENDING:   { bg: 'bg-orange-100',  text: 'text-orange-700',  icon: '⏳' },
   BOOKING_APPROVED:  { bg: 'bg-green-100',  text: 'text-green-700',  icon: '✓' },
   BOOKING_REJECTED:  { bg: 'bg-red-100',    text: 'text-red-700',    icon: '✕' },
   BOOKING_CANCELLED: { bg: 'bg-gray-100',   text: 'text-gray-600',   icon: '⊘' },
