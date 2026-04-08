@@ -37,15 +37,14 @@ public class TicketService {
         String role = currentUser.getRole().name();
 
         switch (role) {
-            case "TECHNICIAN":
-                // Technician sees ALL tickets
+            case "ADMIN":
+                // Admin sees ALL tickets so they can assign technicians
                 return ticketRepository.findAllByOrderByCreatedAtDesc();
 
-            case "ADMIN":
-                // Admin sees tickets they created OR assigned to them
+            case "TECHNICIAN":
+                // Technician sees only tickets assigned to them
                 return ticketRepository
-                        .findByReportedByIdOrAssignedToIdOrderByCreatedAtDesc(
-                                currentUser.getId(), currentUser.getId());
+                        .findByAssignedToIdOrderByCreatedAtDesc(currentUser.getId());
 
             default:
                 // Regular USER sees only their own tickets

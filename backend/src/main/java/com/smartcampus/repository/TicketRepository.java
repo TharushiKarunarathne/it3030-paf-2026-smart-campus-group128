@@ -22,6 +22,9 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     // Filter by status (for technician dashboard)
     List<Ticket> findByStatusOrderByCreatedAtDesc(Ticket.Status status);
 
+    // TECHNICIAN — tickets assigned to them
+    List<Ticket> findByAssignedToIdOrderByCreatedAtDesc(String assignedToId);
+
     // Filter by assigned technician + status
     List<Ticket> findByAssignedToIdAndStatusOrderByCreatedAtDesc(
             String assignedToId, Ticket.Status status);
