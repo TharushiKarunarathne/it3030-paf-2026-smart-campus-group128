@@ -8,6 +8,26 @@ const ROLE_BADGE = {
   USER:       'bg-gray-100 text-gray-600',
 }
 
+const TYPE_STYLES = {
+  BOOKING_PENDING:   { bg: 'bg-orange-100',  text: 'text-orange-700',  icon: '⏳' },
+  BOOKING_APPROVED:  { bg: 'bg-green-100',  text: 'text-green-700',  icon: '✓' },
+  BOOKING_REJECTED:  { bg: 'bg-red-100',    text: 'text-red-700',    icon: '✕' },
+  BOOKING_CANCELLED: { bg: 'bg-gray-100',   text: 'text-gray-600',   icon: '⊘' },
+  TICKET_UPDATED:    { bg: 'bg-blue-100',   text: 'text-blue-700',   icon: '↑' },
+  NEW_COMMENT:       { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: '💬' },
+}
+
+function timeAgo(dateStr) {
+  const diff  = Date.now() - new Date(dateStr).getTime()
+  const mins  = Math.floor(diff / 60_000)
+  const hours = Math.floor(diff / 3_600_000)
+  const days  = Math.floor(diff / 86_400_000)
+  if (mins < 1)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${days}d ago`
+}
+
 function QuickLink({ to, label, icon }) {
   return (
     <Link to={to}
@@ -34,7 +54,7 @@ function StatCard({ label, value, to, color }) {
 
 export default function DashboardPage() {
   const { user, isAdmin, isTechnician } = useAuth()
-  const { unreadCount } = useNotifications()
+  const { notifications, unreadCount } = useNotifications()
 
   return (
     <div>
@@ -189,16 +209,48 @@ export default function DashboardPage() {
               View all
             </Link>
           </div>
-          {unreadCount === 0 ? (
+
+          {notifications.length === 0 ? (
             <p className="text-sm text-gray-400 py-4 text-center">
-              No new notifications
+              No activity yet
             </p>
           ) : (
-            <p className="text-sm text-gray-600">
-              You have{' '}
-              <span className="font-semibold text-blue-600">{unreadCount}</span>
-              {' '}unread notification{unreadCount !== 1 ? 's' : ''}.
-            </p>
+            <div className="space-y-2">
+              {notifications.slice(0, 5).map((n) => {
+                const styles = TYPE_STYLES[n.type] ?? TYPE_STYLES.TICKET_UPDATED
+                const href = n.type?.startsWith('BOOKING')
+                  ? `/bookings/${n.entityId}`
+                  : `/tickets/${n.entityId}`
+
+                return (
+                  <Link
+                    key={n.id}
+                    to={href}
+                    className={`flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50
+                               transition-colors border
+                               ${!n.read ? 'border-blue-200 bg-blue-50/40' : 'border-gray-100'}`}
+                  >
+                    <span className={`flex-shrink-0 w-6 h-6 rounded-full
+                                     flex items-center justify-center text-xs font-bold
+                                     ${styles.bg} ${styles.text}`}>
+                      {styles.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-snug
+                                     ${!n.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                        {n.message}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {timeAgo(n.createdAt)}
+                      </p>
+                    </div>
+                    {!n.read && (
+                      <span className="flex-shrink-0 mt-1 w-2 h-2 rounded-full bg-blue-500" />
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
           )}
         </div>
       </div>

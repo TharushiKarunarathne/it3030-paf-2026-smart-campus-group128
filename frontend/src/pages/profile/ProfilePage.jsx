@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { updateMe } from '../../api/authApi'
+import { updateMe, uploadProfilePhoto } from '../../api/authApi'
 import toast from 'react-hot-toast'
 
 export default function ProfilePage() {
@@ -11,6 +11,8 @@ export default function ProfilePage() {
   const [password, setPassword]     = useState('')
   const [confirmPw, setConfirmPw]   = useState('')
   const [loading, setLoading]       = useState(false)
+  const [photoPreview, setPhotoPreview] = useState(user?.picture || null)
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
 
   const ROLE_BADGE = {
     ADMIN:      'bg-purple-100 text-purple-700',
@@ -47,6 +49,49 @@ export default function ProfilePage() {
     }
   }
 
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file.')
+      return
+    }
+
+    setSelectedPhoto(file)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setPhotoPreview(event.target?.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handlePhotoUpload = async () => {
+    if (!selectedPhoto) {
+      toast.error('Please select a photo first.')
+      return
+    }
+
+    try {
+      setLoading(true)
+      console.log('Uploading photo:', selectedPhoto.name, selectedPhoto.type)
+
+      const response = await uploadProfilePhoto(selectedPhoto)
+      console.log('Upload response:', response)
+
+      await refreshUser()
+
+      setSelectedPhoto(null)
+      setPhotoPreview(null) // Reset preview to show actual from database
+      toast.success('Photo uploaded successfully!')
+    } catch (err) {
+      console.error('Upload error:', err.response?.data || err.message)
+      toast.error(err.response?.data?.error || 'Failed to upload photo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
@@ -55,7 +100,7 @@ export default function ProfilePage() {
         {/* Avatar + role */}
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
           {user?.picture ? (
-            <img src={user.picture} alt={user.name}
+            <img src={user.picture} alt={user?.name}
               className="w-16 h-16 rounded-full object-cover" />
           ) : (
             <div className="w-16 h-16 rounded-full bg-primary-100
@@ -65,12 +110,35 @@ export default function ProfilePage() {
               </span>
             </div>
           )}
-          <div>
+          <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-900">{user?.name}</h2>
             <p className="text-sm text-gray-500">{user?.email}</p>
             <span className={`mt-1 badge ${ROLE_BADGE[user?.role] ?? ROLE_BADGE.USER}`}>
               {user?.role}
             </span>
+          </div>
+        </div>
+
+        {/* Photo upload section */}
+        <div className="mb-6 pb-6 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Update profile photo
+          </h3>
+          <div className="flex items-center gap-3">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoSelect}
+              className="flex-1 text-sm text-gray-600"
+            />
+            <button
+              type="button"
+              onClick={handlePhotoUpload}
+              disabled={!selectedPhoto || loading}
+              className="btn-primary text-sm"
+            >
+              {loading ? 'Uploading...' : 'Upload'}
+            </button>
           </div>
         </div>
 

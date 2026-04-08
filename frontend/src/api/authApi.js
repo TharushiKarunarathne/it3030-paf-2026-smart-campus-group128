@@ -12,6 +12,14 @@ export const getMe = () =>
 export const updateMe = (data) =>
   api.put('/users/me', data)
 
+export const uploadProfilePhoto = (file) => {
+  const formData = new FormData()
+  formData.append('photo', file)
+  return api.post('/users/me/photo', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 export const getAllUsers = (params) =>
   api.get('/users', { params })
 

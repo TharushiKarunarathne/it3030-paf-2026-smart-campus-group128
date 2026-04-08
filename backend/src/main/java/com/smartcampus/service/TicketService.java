@@ -10,11 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class TicketService {
@@ -22,13 +18,16 @@ public class TicketService {
     private final TicketRepository       ticketRepository;
     private final UserRepository         userRepository;
     private final NotificationService    notificationService;
+    private final FileStorageService     fileStorageService;
 
     public TicketService(TicketRepository ticketRepository,
                          UserRepository userRepository,
-                         NotificationService notificationService) {
+                         NotificationService notificationService,
+                         FileStorageService fileStorageService) {
         this.ticketRepository    = ticketRepository;
         this.userRepository      = userRepository;
         this.notificationService = notificationService;
+        this.fileStorageService  = fileStorageService;
     }
 
     // ─── GET TICKETS BY ROLE ────────────────────────────────────────────────
@@ -102,11 +101,24 @@ public class TicketService {
 
         // Handle image upload
         if (image != null && !image.isEmpty()) {
-            String imageUrl = saveImage(image);
+            String imageUrl = fileStorageService.saveTicketImage(image);
             ticket.setImageUrl(imageUrl);
         }
 
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Notify all admins about the new ticket
+        List<User> admins = userRepository.findByRole(User.Role.ADMIN);
+        for (User admin : admins) {
+            notificationService.createNotification(
+                admin.getId(),
+                "New ticket from " + currentUser.getName() + ": \"" + title + "\"",
+                Notification.NotificationType.TICKET_UPDATED,
+                saved.getId()
+            );
+        }
+
+        return saved;
     }
 
     // ─── UPDATE STATUS ───────────────────────────────────────────────────────
@@ -320,21 +332,5 @@ public Ticket resolveTicket(String ticketId, String resolutionNote, User current
         } catch (Exception e) {
             throw new RuntimeException("Invalid status: " + status);
         }
-    }
-
-    private String saveImage(MultipartFile image) throws IOException {
-        // Save to uploads folder — returns a relative URL
-        String uploadDir = "uploads/tickets/";
-        Path uploadPath  = Paths.get(uploadDir);
-
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
-        String filename  = UUID.randomUUID() + "_" + image.getOriginalFilename();
-        Path   filePath  = uploadPath.resolve(filename);
-        Files.copy(image.getInputStream(), filePath);
-
-        return "/" + uploadDir + filename;
     }
 }

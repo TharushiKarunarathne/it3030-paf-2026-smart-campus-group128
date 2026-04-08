@@ -2,11 +2,14 @@ package com.smartcampus.controller;
 
 import com.smartcampus.model.User;
 import com.smartcampus.service.UserService;
+import com.smartcampus.service.FileStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,9 +18,12 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final FileStorageService fileStorageService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService,
+                         FileStorageService fileStorageService) {
         this.userService = userService;
+        this.fileStorageService = fileStorageService;
     }
 
     // GET /api/users/me
@@ -117,6 +123,60 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/users/me/photo — upload profile photo
+    @PostMapping("/me/photo")
+    public ResponseEntity<?> uploadProfilePhoto(
+            @RequestParam("photo") MultipartFile photo,
+            @AuthenticationPrincipal User user) {
+        try {
+            System.out.println("==> Photo upload request received");
+            System.out.println("    User: " + user.getId());
+            System.out.println("    File: " + photo.getOriginalFilename() + " (" + photo.getSize() + " bytes)");
+            System.out.println("    ContentType: " + photo.getContentType());
+
+            if (photo == null || photo.isEmpty()) {
+                System.out.println("    ERROR: Photo is empty");
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Photo is required"));
+            }
+
+            // Validate file type
+            String contentType = photo.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                System.out.println("    ERROR: Invalid content type: " + contentType);
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "File must be an image"));
+            }
+
+            // Save photo using FileStorageService
+            System.out.println("    Saving photo...");
+            String photoUrl = fileStorageService.saveProfilePhoto(photo);
+            System.out.println("    Photo URL: " + photoUrl);
+
+            // Update user with new photo URL
+            System.out.println("    Updating user profile...");
+            User updated = userService.updateProfile(user.getId(),
+                    Map.of("picture", photoUrl));
+            System.out.println("    User updated. Picture: " + updated.getPicture());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Photo uploaded successfully",
+                    "picture", photoUrl,
+                    "user", updated
+            ));
+        } catch (IOException e) {
+            System.out.println("    ERROR: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Failed to upload photo: " + e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("    UNEXPECTED ERROR: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Unexpected error: " + e.getMessage()));
         }
     }
 }
