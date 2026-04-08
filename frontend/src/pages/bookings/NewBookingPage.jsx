@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { createBooking } from '../../api/bookingApi'
-import { getResourceById } from '../../api/resourceApi'
+import { getResourceById, getResources } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
 const TYPE_ICON = {
@@ -9,36 +9,95 @@ const TYPE_ICON = {
   MEETING_ROOM: '🪑', VEHICLE: '🚌', LIBRARY_STUDY_ROOM: '📚',
 }
 
+const TYPE_CONFIG = {
+  LECTURE_HALL:       { label: 'Lecture Hall',       color: 'bg-blue-50 text-blue-600',    accent: 'bg-blue-500' },
+  COMPUTER_LAB:       { label: 'Computer Lab',       color: 'bg-purple-50 text-purple-600', accent: 'bg-purple-500' },
+  SPORTS_FACILITY:    { label: 'Sports / Gym',       color: 'bg-green-50 text-green-600',  accent: 'bg-green-500' },
+  MEETING_ROOM:       { label: 'Meeting Room',       color: 'bg-sky-50 text-sky-600',      accent: 'bg-sky-500' },
+  VEHICLE:            { label: 'Vehicle',            color: 'bg-amber-50 text-amber-600',  accent: 'bg-amber-500' },
+  LIBRARY_STUDY_ROOM: { label: 'Library Study Room', color: 'bg-teal-50 text-teal-600',    accent: 'bg-teal-500' },
+}
+
+const TYPE_FILTERS = [
+  { key: 'ALL',               label: 'All' },
+  { key: 'LECTURE_HALL',      label: 'Lecture Halls' },
+  { key: 'COMPUTER_LAB',      label: 'Computer Labs' },
+  { key: 'VEHICLE',           label: 'Vehicles' },
+  { key: 'SPORTS_FACILITY',   label: 'Sports' },
+  { key: 'MEETING_ROOM',      label: 'Meeting Rooms' },
+  { key: 'LIBRARY_STUDY_ROOM',label: 'Library' },
+]
+
 export default function NewBookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const resourceId   = searchParams.get('resourceId')
-  const resourceName = searchParams.get('resourceName')
+  const resourceIdFromUrl   = searchParams.get('resourceId')
+  const resourceNameFromUrl = searchParams.get('resourceName')
 
-  const [resource, setResource] = useState(null)
-  const [loading, setLoading]   = useState(false)
-  const [form, setForm] = useState({
-    date:      '',
-    startTime: '',
-    endTime:   '',
-    purpose:   '',
-  })
+  // Resource selection state
+  const [step, setStep]             = useState(resourceIdFromUrl ? 2 : 1) // 1=pick resource, 2=fill form
+  const [allResources, setAllResources] = useState([])
+  const [resourcesLoading, setResourcesLoading] = useState(false)
+  const [selectedResource, setSelectedResource] = useState(null)
+  const [typeFilter, setTypeFilter] = useState('ALL')
+  const [search, setSearch]         = useState('')
+
+  // Form state
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ date: '', startTime: '', endTime: '', purpose: '' })
   const [error, setError] = useState('')
 
-  // Load resource details for display
+  // If came from resource page — load that resource directly
   useEffect(() => {
-    if (!resourceId) return
-    getResourceById(resourceId)
-      .then(({ data }) => setResource(data))
-      .catch(() => {})
-  }, [resourceId])
+    if (resourceIdFromUrl) {
+      getResourceById(resourceIdFromUrl)
+        .then(({ data }) => setSelectedResource(data))
+        .catch(() => {
+          toast.error('Resource not found.')
+          setStep(1)
+        })
+    }
+  }, [resourceIdFromUrl])
+
+  // Load all available resources for the browser
+  useEffect(() => {
+    if (step === 1) {
+      setResourcesLoading(true)
+      getResources()
+        .then(({ data }) => setAllResources(Array.isArray(data) ? data : []))
+        .catch(() => toast.error('Failed to load resources.'))
+        .finally(() => setResourcesLoading(false))
+    }
+  }, [step])
+
+  // Filter resources in browser
+  const filteredResources = allResources
+    .filter(r => r.status === 'AVAILABLE')
+    .filter(r => typeFilter === 'ALL' || r.type === typeFilter)
+    .filter(r => {
+      if (!search) return true
+      const q = search.toLowerCase()
+      return r.name?.toLowerCase().includes(q) ||
+             r.location?.toLowerCase().includes(q)
+    })
+
+  const handleSelectResource = (resource) => {
+    setSelectedResource(resource)
+    setStep(2)
+  }
+
+  const handleChangeResource = () => {
+    setSelectedResource(null)
+    setStep(1)
+    setForm({ date: '', startTime: '', endTime: '', purpose: '' })
+    setError('')
+  }
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError('')
   }
 
-  // Auto-calculate end time when start changes (default +1 hour)
   const handleStartChange = (e) => {
     const start = e.target.value
     setForm(prev => {
@@ -54,22 +113,20 @@ export default function NewBookingPage() {
   }
 
   const validate = () => {
-    if (!resourceId)          return 'No resource selected.'
-    if (!form.date)           return 'Please select a date.'
-    if (!form.startTime)      return 'Please select a start time.'
-    if (!form.endTime)        return 'Please select an end time.'
+    if (!selectedResource)        return 'Please select a resource.'
+    if (!form.date)               return 'Please select a date.'
+    if (!form.startTime)          return 'Please select a start time.'
+    if (!form.endTime)            return 'Please select an end time.'
     if (form.endTime <= form.startTime) return 'End time must be after start time.'
-    if (!form.purpose.trim()) return 'Please enter the purpose of this booking.'
+    if (!form.purpose.trim())     return 'Please enter the purpose of this booking.'
 
-    // Cannot book in the past
-    const now = new Date()
+    const now   = new Date()
     const start = new Date(`${form.date}T${form.startTime}`)
     if (start < now) return 'Cannot book a time slot in the past.'
 
-    // Min 30 min
-    const end = new Date(`${form.date}T${form.endTime}`)
+    const end  = new Date(`${form.date}T${form.endTime}`)
     const mins = (end - start) / 60000
-    if (mins < 30) return 'Minimum booking duration is 30 minutes.'
+    if (mins < 30)  return 'Minimum booking duration is 30 minutes.'
     if (mins > 480) return 'Maximum booking duration is 8 hours.'
 
     return null
@@ -85,13 +142,14 @@ export default function NewBookingPage() {
       const endTime   = new Date(`${form.date}T${form.endTime}`).toISOString()
 
       const { data } = await createBooking({
-        resourceId,
-        resourceName: resource?.name ?? resourceName,
-        resourceType: resource?.type,
+        resourceId:   selectedResource.id,
+        resourceName: selectedResource.name,
+        resourceType: selectedResource.type,
         startTime,
         endTime,
         purpose: form.purpose.trim(),
       })
+
       toast.success('Booking submitted! Waiting for approval.')
       navigate(`/bookings/${data.id}`)
     } catch (err) {
@@ -103,7 +161,7 @@ export default function NewBookingPage() {
     }
   }
 
-  // Calculate duration for display
+  // Duration display
   let durationLabel = ''
   if (form.startTime && form.endTime && form.endTime > form.startTime) {
     const [sh, sm] = form.startTime.split(':').map(Number)
@@ -115,15 +173,143 @@ export default function NewBookingPage() {
     }
   }
 
-  // Today's date for min attribute
   const today = new Date().toISOString().split('T')[0]
+
+  // ── Step 1: Resource Browser ───────────────────────
+
+  if (step === 1) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Link to="/bookings"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500
+                     hover:text-gray-800 transition-colors mb-6">
+          ← Back to My Bookings
+        </Link>
+
+        {/* Hero */}
+        <div className="rounded-t-2xl overflow-hidden"
+             style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
+          <div className="px-6 py-5">
+            <h1 className="text-xl font-bold text-white mb-0.5">New Booking</h1>
+            <p className="text-blue-200 text-sm">
+              Step 1 of 2 — Choose a resource to book
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-5">
+
+          {/* Search + filter */}
+          <div className="flex gap-3 mb-4">
+            <input
+              className="input flex-1"
+              placeholder="Search by name or location..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Type filter pills */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {TYPE_FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setTypeFilter(f.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors
+                  ${typeFilter === f.key
+                    ? 'bg-indigo-700 text-white'
+                    : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+                  }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Resource grid */}
+          {resourcesLoading ? (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-24 bg-gray-50 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredResources.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-3xl mb-3">🏛️</p>
+              <p className="text-gray-500 text-sm">No available resources found</p>
+              <p className="text-gray-400 text-xs mt-1">
+                Try adjusting your search or filter
+              </p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {filteredResources.map(resource => {
+                const typeConf = TYPE_CONFIG[resource.type] ??
+                  { label: resource.type, color: 'bg-gray-50 text-gray-600', accent: 'bg-gray-400' }
+                const icon = TYPE_ICON[resource.type] ?? '📦'
+
+                return (
+                  <button
+                    key={resource.id}
+                    onClick={() => handleSelectResource(resource)}
+                    className="text-left border border-gray-100 rounded-xl p-4
+                               hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5
+                               transition-all duration-200 bg-white group"
+                  >
+                    {/* Accent bar */}
+                    <div className={`h-0.5 ${typeConf.accent} rounded-full mb-3
+                                     opacity-0 group-hover:opacity-100 transition-opacity`} />
+
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center
+                                       justify-center text-xl flex-shrink-0 ${typeConf.color}`}>
+                        {icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">
+                          {resource.name}
+                        </p>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider mt-0.5">
+                          {typeConf.label}
+                        </p>
+                        {resource.location && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            📍 {resource.location}
+                          </p>
+                        )}
+                        {resource.capacity && (
+                          <p className="text-xs text-gray-500">
+                            👥 Capacity: {resource.capacity}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-indigo-400 text-lg group-hover:translate-x-1
+                                       transition-transform flex-shrink-0">
+                        →
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 text-center mt-4">
+            Only available resources are shown
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Step 2: Booking Form ───────────────────────────
 
   return (
     <div className="max-w-xl mx-auto">
-      <Link to={resourceId ? `/resources/${resourceId}` : '/resources'}
+      <Link to="/bookings"
         className="inline-flex items-center gap-1.5 text-sm text-gray-500
                    hover:text-gray-800 transition-colors mb-6">
-        ← Back
+        ← Back to My Bookings
       </Link>
 
       {/* Hero */}
@@ -132,7 +318,7 @@ export default function NewBookingPage() {
         <div className="px-6 py-5">
           <h1 className="text-xl font-bold text-white mb-0.5">New Booking</h1>
           <p className="text-blue-200 text-sm">
-            Select your time slot and submit for approval
+            Step 2 of 2 — Fill in your booking details
           </p>
         </div>
       </div>
@@ -140,8 +326,8 @@ export default function NewBookingPage() {
       <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-6">
         <div className="space-y-5">
 
-          {/* Resource display */}
-          {(resource || resourceName) && (
+          {/* Selected resource display */}
+          {selectedResource && (
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase
                                 tracking-wider mb-2">
@@ -149,36 +335,38 @@ export default function NewBookingPage() {
               </label>
               <div className="flex items-center gap-3 bg-indigo-50/60 border
                               border-indigo-100 rounded-xl p-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center
-                                justify-center text-xl flex-shrink-0">
-                  {TYPE_ICON[resource?.type] ?? '📦'}
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center
+                                 text-xl flex-shrink-0
+                                 ${TYPE_CONFIG[selectedResource.type]?.color ?? 'bg-gray-50'}`}>
+                  {TYPE_ICON[selectedResource.type] ?? '📦'}
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-semibold text-gray-900 text-sm">
-                    {resource?.name ?? resourceName}
+                    {selectedResource.name}
                   </p>
                   <p className="text-xs text-blue-600">
-                    {resource?.type?.replace(/_/g, ' ')}
-                    {resource?.location ? ` · ${resource.location}` : ''}
+                    {TYPE_CONFIG[selectedResource.type]?.label ?? selectedResource.type}
+                    {selectedResource.location ? ` · ${selectedResource.location}` : ''}
                   </p>
                 </div>
-                <Link to="/resources"
-                  className="ml-auto text-xs text-gray-400 hover:text-gray-600
-                             underline underline-offset-2">
-                  Change
-                </Link>
+                {/* Only show Change if NOT coming from resource page */}
+                {!resourceIdFromUrl && (
+                  <button
+                    onClick={handleChangeResource}
+                    className="text-xs text-indigo-600 hover:text-indigo-800
+                               font-medium underline underline-offset-2 flex-shrink-0">
+                    Change
+                  </button>
+                )}
+                {resourceIdFromUrl && (
+                  <Link
+                    to="/resources"
+                    className="text-xs text-gray-400 hover:text-gray-600
+                               underline underline-offset-2 flex-shrink-0">
+                    Change
+                  </Link>
+                )}
               </div>
-            </div>
-          )}
-
-          {!resourceId && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-              <p className="text-sm text-amber-700 mb-3">
-                No resource selected. Please choose one first.
-              </p>
-              <Link to="/resources" className="btn-primary text-sm inline-block">
-                Browse resources
-              </Link>
             </div>
           )}
 
@@ -197,7 +385,7 @@ export default function NewBookingPage() {
             />
           </div>
 
-          {/* Time row */}
+          {/* Start + End time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">
@@ -253,7 +441,7 @@ export default function NewBookingPage() {
             </p>
           </div>
 
-          {/* Validation error */}
+          {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <p className="text-sm text-red-600">{error}</p>
@@ -264,7 +452,7 @@ export default function NewBookingPage() {
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
             <p className="text-xs text-blue-700 leading-relaxed">
               ℹ️ Bookings require admin approval. You'll be notified once your
-              request is reviewed. Approved bookings cannot be edited.
+              request is reviewed.
             </p>
           </div>
 
@@ -272,17 +460,18 @@ export default function NewBookingPage() {
           <div className="flex gap-3 pt-1">
             <button
               onClick={handleSubmit}
-              disabled={loading || !resourceId}
-              className="btn-primary flex-1 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+              className="btn-primary flex-1 py-2.5 disabled:opacity-50
+                         disabled:cursor-not-allowed"
             >
               {loading ? 'Submitting...' : '📅 Submit booking request'}
             </button>
-            <Link
-              to={resourceId ? `/resources/${resourceId}` : '/resources'}
-              className="btn-secondary flex-1 text-center py-2.5"
+            <button
+              onClick={handleChangeResource}
+              className="btn-secondary px-4 py-2.5"
             >
-              Cancel
-            </Link>
+              ← Back
+            </button>
           </div>
 
         </div>

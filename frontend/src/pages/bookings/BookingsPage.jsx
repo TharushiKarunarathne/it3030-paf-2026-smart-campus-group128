@@ -102,7 +102,7 @@ export default function BookingsPage() {
               <p className="text-blue-200 text-sm">Track and manage your resource reservations</p>
             </div>
             <Link
-              to="/resources"
+              to="/bookings/new"
               className="flex items-center gap-2 bg-white/15 hover:bg-white/25
                          border border-white/30 text-white text-sm font-medium
                          px-4 py-2.5 rounded-xl transition-colors">
