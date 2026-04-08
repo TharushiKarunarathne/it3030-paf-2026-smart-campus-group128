@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getResources, deleteResource, updateResourceStatus } from '../../api/resourceApi'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
+import ComparePanel from '../../components/resources/ComparePanel'
 
 const TYPE_CONFIG = {
   LECTURE_HALL:       { label: 'Lecture Hall',       icon: '🏛️', color: 'bg-blue-50 text-blue-600',    accent: 'bg-blue-500' },
@@ -29,8 +30,7 @@ const TYPE_FILTERS = [
   { key: 'LIBRARY_STUDY_ROOM', label: 'Library' },
 ]
 
-function ResourceCard({ resource, isAdmin, onDelete, onStatusChange }) {
-  const type   = TYPE_CONFIG[resource.type]   ?? { label: resource.type,   icon: '📦', color: 'bg-gray-50 text-gray-600',   accent: 'bg-gray-400' }
+function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, onCompare, isInCompare }) {  const type   = TYPE_CONFIG[resource.type]   ?? { label: resource.type,   icon: '📦', color: 'bg-gray-50 text-gray-600',   accent: 'bg-gray-400' }
   const status = STATUS_CONFIG[resource.status] ?? { label: resource.status, dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600' }
 
   // Build quick-info chips from details
@@ -91,6 +91,18 @@ function ResourceCard({ resource, isAdmin, onDelete, onStatusChange }) {
 
         {/* Spacer */}
         <div className="flex-1" />
+        {/* Compare toggle */}
+<button
+  onClick={() => onCompare(resource)}
+  className={`w-full text-xs font-medium py-1.5 rounded-lg mb-2 transition-colors
+               border flex items-center justify-center gap-1.5
+               ${isInCompare
+                 ? 'bg-indigo-700 text-white border-indigo-700'
+                 : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+               }`}
+>
+  {isInCompare ? '✓ Added to compare' : '+ Add to compare'}
+</button>
 
         {/* Action buttons */}
         <div className="flex gap-2 mt-2">
@@ -149,6 +161,30 @@ export default function ResourcesPage() {
   const [search, setSearch]             = useState('')
   const [typeFilter, setTypeFilter]     = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [compareList, setCompareList] = useState([])
+  const [showCompare, setShowCompare] = useState(false)
+
+  const toggleCompare = (resource) => {
+    setCompareList(prev => {
+      const exists = prev.find(r => r.id === resource.id)
+      if (exists) return prev.filter(r => r.id !== resource.id)
+      if (prev.length >= 2) {
+        toast('You can only compare 2 resources at a time.', { icon: '⚠️' })
+        return prev
+      }
+      return [...prev, resource]
+    })
+  }
+
+  const removeFromCompare = (id) => {
+    setCompareList(prev => prev.filter(r => r.id !== id))
+    if (compareList.length <= 2) setShowCompare(false)
+  }
+
+  const clearCompare = () => {
+    setCompareList([])
+    setShowCompare(false)
+  }
 
   useEffect(() => { fetchResources() }, [])
 
@@ -279,6 +315,66 @@ export default function ResourcesPage() {
         Showing {filtered.length} of {resources.length} resources
       </p>
 
+      {/* Compare bar */}
+{compareList.length > 0 && (
+  <div className="flex items-center gap-3 bg-white border border-indigo-100
+                  rounded-2xl px-4 py-3 mb-5 shadow-sm">
+    <div className="flex-1">
+      <p className="text-xs text-gray-400 mb-1">Selected for comparison</p>
+      <div className="flex gap-2 flex-wrap">
+        {compareList.map(r => {
+          const t = TYPE_CONFIG[r.type] ?? { icon: '📦' }
+          return (
+            <span key={r.id}
+              className="inline-flex items-center gap-1.5 bg-indigo-700 text-white
+                         text-xs font-medium px-3 py-1 rounded-full">
+              {t.icon} {r.name}
+              <button
+                onClick={() => removeFromCompare(r.id)}
+                className="opacity-60 hover:opacity-100 ml-0.5"
+              >
+                ✕
+              </button>
+            </span>
+          )
+        })}
+      </div>
+    </div>
+    <div className="flex gap-2">
+      <button
+        onClick={clearCompare}
+        className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5
+                   border border-gray-200 rounded-xl transition-colors"
+      >
+        Clear
+      </button>
+      {compareList.length === 2 && (
+        <button
+          onClick={() => setShowCompare(true)}
+          className="text-xs font-medium bg-indigo-700 text-white px-4 py-1.5
+                     rounded-xl hover:bg-indigo-800 transition-colors"
+        >
+          Compare now →
+        </button>
+      )}
+      {compareList.length === 1 && (
+        <span className="text-xs text-gray-400 px-3 py-1.5">
+          Select 1 more
+        </span>
+      )}
+    </div>
+  </div>
+)}
+
+{/* Compare panel */}
+{showCompare && compareList.length === 2 && (
+  <ComparePanel
+    resources={compareList}
+    onRemove={removeFromCompare}
+    onClear={clearCompare}
+  />
+)}
+
       {/* ── Grid ─────────────────────────────────────── */}
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -303,12 +399,16 @@ export default function ResourcesPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(resource => (
             <ResourceCard
-              key={resource.id}
-              resource={resource}
-              isAdmin={isAdmin}
-              onDelete={handleDelete}
-              onStatusChange={handleStatusChange}
-            />
+  key={resource.id}
+  resource={resource}
+  isAdmin={isAdmin}
+  onDelete={handleDelete}
+  onStatusChange={handleStatusChange}
+  onCompare={toggleCompare}
+  isInCompare={!!compareList.find(r => r.id === resource.id)}
+  compareList={compareList}
+  removeFromCompare={removeFromCompare}
+/>
           ))}
         </div>
       )}
