@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { createBooking } from '../../api/bookingApi'
+import { createBooking, getBookingsByResource } from '../../api/bookingApi'
 import { getResourceById, getResources } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
@@ -19,14 +19,199 @@ const TYPE_CONFIG = {
 }
 
 const TYPE_FILTERS = [
-  { key: 'ALL',               label: 'All' },
-  { key: 'LECTURE_HALL',      label: 'Lecture Halls' },
-  { key: 'COMPUTER_LAB',      label: 'Computer Labs' },
-  { key: 'VEHICLE',           label: 'Vehicles' },
-  { key: 'SPORTS_FACILITY',   label: 'Sports' },
-  { key: 'MEETING_ROOM',      label: 'Meeting Rooms' },
-  { key: 'LIBRARY_STUDY_ROOM',label: 'Library' },
+  { key: 'ALL',                label: 'All' },
+  { key: 'LECTURE_HALL',       label: 'Lecture Halls' },
+  { key: 'COMPUTER_LAB',       label: 'Computer Labs' },
+  { key: 'VEHICLE',            label: 'Vehicles' },
+  { key: 'SPORTS_FACILITY',    label: 'Sports' },
+  { key: 'MEETING_ROOM',       label: 'Meeting Rooms' },
+  { key: 'LIBRARY_STUDY_ROOM', label: 'Library' },
 ]
+
+function formatTime(dt) {
+  return new Date(dt).toLocaleTimeString('en-GB', {
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+// ── Availability Panel ─────────────────────────────────
+function AvailabilityPanel({ resourceId, selectedDate }) {
+  const [bookedSlots, setBookedSlots] = useState([])
+  const [loading, setLoading]         = useState(false)
+
+  useEffect(() => {
+    if (!resourceId || !selectedDate) {
+      setBookedSlots([])
+      return
+    }
+
+    const fetchSlots = async () => {
+      try {
+        setLoading(true)
+        const { data } = await getBookingsByResource(resourceId)
+        const bookings = Array.isArray(data) ? data : []
+
+        // Filter only APPROVED bookings for the selected date
+        const daySlots = bookings.filter(b => {
+          if (b.status !== 'APPROVED') return false
+          const bookingDate = b.startTime.substring(0, 10)
+          return bookingDate === selectedDate
+        })
+
+        // Sort by start time
+        daySlots.sort((a, b) =>
+          new Date(a.startTime) - new Date(b.startTime)
+        )
+
+        setBookedSlots(daySlots)
+      } catch {
+        setBookedSlots([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSlots()
+  }, [resourceId, selectedDate])
+
+  if (!selectedDate) return null
+
+  // Format time from local datetime string e.g. "2026-04-20T09:00:00"
+  const fmtTime = (dtStr) => {
+    const [, timePart] = dtStr.split('T')
+    const [h, m] = timePart.split(':')
+    const hour = parseInt(h)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const displayH = hour % 12 === 0 ? 12 : hour % 12
+    return `${String(displayH).padStart(2, '0')}:${m} ${ampm}`
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          📅 Availability for{' '}
+          {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          })}
+        </p>
+      </div>
+
+      <div className="p-4">
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-10 bg-gray-50 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : bookedSlots.length === 0 ? (
+          <div className="flex items-center gap-3 bg-green-50 border
+                          border-green-100 rounded-xl px-4 py-3">
+            <span className="text-green-500 text-lg">✓</span>
+            <div>
+              <p className="text-sm font-semibold text-green-700">
+                Fully available
+              </p>
+              <p className="text-xs text-green-600">
+                No approved bookings on this day
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+
+            {/* Booked slots */}
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              Booked slots — avoid these times:
+            </p>
+            {bookedSlots.map((slot, i) => (
+              <div key={i}
+                className="flex items-center gap-3 bg-red-50 border
+                           border-red-100 rounded-xl px-4 py-2.5">
+                <span className="text-red-400 text-sm">🔴</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-700">
+                    {fmtTime(slot.startTime)} – {fmtTime(slot.endTime)}
+                  </p>
+                  {slot.purpose && (
+                    <p className="text-xs text-red-500 truncate">
+                      {slot.purpose}
+                    </p>
+                  )}
+                </div>
+                <span className="text-xs bg-red-100 text-red-600
+                                 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                  Booked
+                </span>
+              </div>
+            ))}
+
+            {/* Available gaps */}
+            <p className="text-xs font-medium text-gray-500 mt-3 mb-2">
+              Available gaps:
+            </p>
+
+            {/* Before first booking */}
+            {(() => {
+              const firstStart = bookedSlots[0].startTime.split('T')[1].substring(0, 5)
+              if (firstStart > '08:00') {
+                return (
+                  <div className="flex items-center gap-3 bg-green-50 border
+                                  border-green-100 rounded-xl px-4 py-2.5">
+                    <span className="text-green-500 text-sm">✅</span>
+                    <p className="text-sm font-medium text-green-700">
+                      08:00 AM – {fmtTime(bookedSlots[0].startTime)}
+                    </p>
+                  </div>
+                )
+              }
+              return null
+            })()}
+
+            {/* Gaps between bookings */}
+            {bookedSlots.slice(0, -1).map((slot, i) => {
+              const gapStartStr = slot.endTime.split('T')[1].substring(0, 5)
+              const gapEndStr   = bookedSlots[i + 1].startTime.split('T')[1].substring(0, 5)
+              const [sh, sm]    = gapStartStr.split(':').map(Number)
+              const [eh, em]    = gapEndStr.split(':').map(Number)
+              const gapMins     = (eh * 60 + em) - (sh * 60 + sm)
+              if (gapMins < 30) return null
+              return (
+                <div key={i}
+                  className="flex items-center gap-3 bg-green-50 border
+                             border-green-100 rounded-xl px-4 py-2.5">
+                  <span className="text-green-500 text-sm">✅</span>
+                  <p className="text-sm font-medium text-green-700">
+                    {fmtTime(slot.endTime)} – {fmtTime(bookedSlots[i + 1].startTime)}
+                  </p>
+                </div>
+              )
+            })}
+
+            {/* After last booking */}
+            {(() => {
+              const lastEnd = bookedSlots[bookedSlots.length - 1].endTime
+                .split('T')[1].substring(0, 5)
+              if (lastEnd < '22:00') {
+                return (
+                  <div className="flex items-center gap-3 bg-green-50 border
+                                  border-green-100 rounded-xl px-4 py-2.5">
+                    <span className="text-green-500 text-sm">✅</span>
+                    <p className="text-sm font-medium text-green-700">
+                      {fmtTime(bookedSlots[bookedSlots.length - 1].endTime)} – 10:00 PM
+                    </p>
+                  </div>
+                )
+              }
+              return null
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function NewBookingPage() {
   const navigate = useNavigate()
@@ -34,20 +219,24 @@ export default function NewBookingPage() {
   const resourceIdFromUrl   = searchParams.get('resourceId')
   const resourceNameFromUrl = searchParams.get('resourceName')
 
-  // Resource selection state
-  const [step, setStep]             = useState(resourceIdFromUrl ? 2 : 1) // 1=pick resource, 2=fill form
-  const [allResources, setAllResources] = useState([])
+  // Step state
+  const [step, setStep] = useState(resourceIdFromUrl ? 2 : 1)
+
+  // Resource browser state
+  const [allResources, setAllResources]         = useState([])
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [selectedResource, setSelectedResource] = useState(null)
-  const [typeFilter, setTypeFilter] = useState('ALL')
-  const [search, setSearch]         = useState('')
+  const [typeFilter, setTypeFilter]             = useState('ALL')
+  const [search, setSearch]                     = useState('')
 
   // Form state
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({ date: '', startTime: '', endTime: '', purpose: '' })
+  const [form, setForm]       = useState({
+    date: '', startTime: '', endTime: '', purpose: '',
+  })
   const [error, setError] = useState('')
 
-  // If came from resource page — load that resource directly
+  // Load resource from URL params
   useEffect(() => {
     if (resourceIdFromUrl) {
       getResourceById(resourceIdFromUrl)
@@ -59,7 +248,7 @@ export default function NewBookingPage() {
     }
   }, [resourceIdFromUrl])
 
-  // Load all available resources for the browser
+  // Load all resources for browser
   useEffect(() => {
     if (step === 1) {
       setResourcesLoading(true)
@@ -70,15 +259,16 @@ export default function NewBookingPage() {
     }
   }, [step])
 
-  // Filter resources in browser
   const filteredResources = allResources
     .filter(r => r.status === 'AVAILABLE')
     .filter(r => typeFilter === 'ALL' || r.type === typeFilter)
     .filter(r => {
       if (!search) return true
       const q = search.toLowerCase()
-      return r.name?.toLowerCase().includes(q) ||
-             r.location?.toLowerCase().includes(q)
+      return (
+        r.name?.toLowerCase().includes(q) ||
+        r.location?.toLowerCase().includes(q)
+      )
     })
 
   const handleSelectResource = (resource) => {
@@ -113,18 +303,20 @@ export default function NewBookingPage() {
   }
 
   const validate = () => {
-    if (!selectedResource)        return 'Please select a resource.'
-    if (!form.date)               return 'Please select a date.'
-    if (!form.startTime)          return 'Please select a start time.'
-    if (!form.endTime)            return 'Please select an end time.'
+    if (!selectedResource)              return 'Please select a resource.'
+    if (!form.date)                     return 'Please select a date.'
+    if (!form.startTime)                return 'Please select a start time.'
+    if (!form.endTime)                  return 'Please select an end time.'
     if (form.endTime <= form.startTime) return 'End time must be after start time.'
-    if (!form.purpose.trim())     return 'Please enter the purpose of this booking.'
+    if (!form.purpose.trim())           return 'Please enter the purpose of this booking.'
 
-    const now   = new Date()
-    const start = new Date(`${form.date}T${form.startTime}`)
-    if (start < now) return 'Cannot book a time slot in the past.'
+    // Past time check using local time correctly
+    const now        = new Date()
+    const localNow   = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+    const start      = new Date(`${form.date}T${form.startTime}:00`)
+    if (start < localNow) return 'Cannot book a time slot in the past.'
 
-    const end  = new Date(`${form.date}T${form.endTime}`)
+    const end  = new Date(`${form.date}T${form.endTime}:00`)
     const mins = (end - start) / 60000
     if (mins < 30)  return 'Minimum booking duration is 30 minutes.'
     if (mins > 480) return 'Maximum booking duration is 8 hours.'
@@ -138,8 +330,11 @@ export default function NewBookingPage() {
 
     try {
       setLoading(true)
-      const startTime = new Date(`${form.date}T${form.startTime}`).toISOString()
-      const endTime   = new Date(`${form.date}T${form.endTime}`).toISOString()
+
+      // Send local time directly — no UTC conversion
+      // Backend parses as LocalDateTime so no timezone shift
+      const startTime = `${form.date}T${form.startTime}:00`
+      const endTime   = `${form.date}T${form.endTime}:00`
 
       const { data } = await createBooking({
         resourceId:   selectedResource.id,
@@ -176,7 +371,6 @@ export default function NewBookingPage() {
   const today = new Date().toISOString().split('T')[0]
 
   // ── Step 1: Resource Browser ───────────────────────
-
   if (step === 1) {
     return (
       <div className="max-w-3xl mx-auto">
@@ -186,7 +380,6 @@ export default function NewBookingPage() {
           ← Back to My Bookings
         </Link>
 
-        {/* Hero */}
         <div className="rounded-t-2xl overflow-hidden"
              style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
           <div className="px-6 py-5">
@@ -199,7 +392,6 @@ export default function NewBookingPage() {
 
         <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-5">
 
-          {/* Search + filter */}
           <div className="flex gap-3 mb-4">
             <input
               className="input flex-1"
@@ -209,7 +401,6 @@ export default function NewBookingPage() {
             />
           </div>
 
-          {/* Type filter pills */}
           <div className="flex flex-wrap gap-2 mb-5">
             {TYPE_FILTERS.map(f => (
               <button
@@ -226,7 +417,6 @@ export default function NewBookingPage() {
             ))}
           </div>
 
-          {/* Resource grid */}
           {resourcesLoading ? (
             <div className="grid sm:grid-cols-2 gap-3">
               {[...Array(4)].map((_, i) => (
@@ -256,10 +446,8 @@ export default function NewBookingPage() {
                                hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5
                                transition-all duration-200 bg-white group"
                   >
-                    {/* Accent bar */}
                     <div className={`h-0.5 ${typeConf.accent} rounded-full mb-3
                                      opacity-0 group-hover:opacity-100 transition-opacity`} />
-
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center
                                        justify-center text-xl flex-shrink-0 ${typeConf.color}`}>
@@ -303,7 +491,6 @@ export default function NewBookingPage() {
   }
 
   // ── Step 2: Booking Form ───────────────────────────
-
   return (
     <div className="max-w-xl mx-auto">
       <Link to="/bookings"
@@ -312,7 +499,6 @@ export default function NewBookingPage() {
         ← Back to My Bookings
       </Link>
 
-      {/* Hero */}
       <div className="rounded-t-2xl overflow-hidden"
            style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
         <div className="px-6 py-5">
@@ -329,8 +515,8 @@ export default function NewBookingPage() {
           {/* Selected resource display */}
           {selectedResource && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase
-                                tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-gray-400
+                                uppercase tracking-wider mb-2">
                 Resource
               </label>
               <div className="flex items-center gap-3 bg-indigo-50/60 border
@@ -349,16 +535,14 @@ export default function NewBookingPage() {
                     {selectedResource.location ? ` · ${selectedResource.location}` : ''}
                   </p>
                 </div>
-                {/* Only show Change if NOT coming from resource page */}
-                {!resourceIdFromUrl && (
+                {!resourceIdFromUrl ? (
                   <button
                     onClick={handleChangeResource}
                     className="text-xs text-indigo-600 hover:text-indigo-800
                                font-medium underline underline-offset-2 flex-shrink-0">
                     Change
                   </button>
-                )}
-                {resourceIdFromUrl && (
+                ) : (
                   <Link
                     to="/resources"
                     className="text-xs text-gray-400 hover:text-gray-600
@@ -384,6 +568,14 @@ export default function NewBookingPage() {
               onChange={handleChange}
             />
           </div>
+
+          {/* Availability Panel — shows after date is picked */}
+          {selectedResource && (
+            <AvailabilityPanel
+              resourceId={selectedResource.id}
+              selectedDate={form.date}
+            />
+          )}
 
           {/* Start + End time */}
           <div className="grid grid-cols-2 gap-4">
@@ -416,8 +608,8 @@ export default function NewBookingPage() {
           {/* Duration chip */}
           {durationLabel && (
             <div className="flex items-center gap-2 -mt-2">
-              <span className="text-xs bg-green-50 text-green-700 border border-green-100
-                               px-3 py-1 rounded-full font-medium">
+              <span className="text-xs bg-green-50 text-green-700 border
+                               border-green-100 px-3 py-1 rounded-full font-medium">
                 ⏱ {durationLabel}
               </span>
             </div>
@@ -432,7 +624,7 @@ export default function NewBookingPage() {
               name="purpose"
               className="input resize-none"
               rows={3}
-              placeholder="e.g. CS3001 Lab Session — Group 4, Faculty meeting, Field trip..."
+              placeholder="e.g. CS3001 Lab Session — Group 4, Faculty meeting..."
               value={form.purpose}
               onChange={handleChange}
             />
@@ -441,7 +633,7 @@ export default function NewBookingPage() {
             </p>
           </div>
 
-          {/* Error */}
+          {/* Validation error */}
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <p className="text-sm text-red-600">{error}</p>
@@ -451,8 +643,8 @@ export default function NewBookingPage() {
           {/* Info note */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
             <p className="text-xs text-blue-700 leading-relaxed">
-              ℹ️ Bookings require admin approval. You'll be notified once your
-              request is reviewed.
+              ℹ️ Bookings require admin approval. You'll be notified once
+              your request is reviewed.
             </p>
           </div>
 
@@ -462,14 +654,12 @@ export default function NewBookingPage() {
               onClick={handleSubmit}
               disabled={loading}
               className="btn-primary flex-1 py-2.5 disabled:opacity-50
-                         disabled:cursor-not-allowed"
-            >
+                         disabled:cursor-not-allowed">
               {loading ? 'Submitting...' : '📅 Submit booking request'}
             </button>
             <button
               onClick={handleChangeResource}
-              className="btn-secondary px-4 py-2.5"
-            >
+              className="btn-secondary px-4 py-2.5">
               ← Back
             </button>
           </div>
