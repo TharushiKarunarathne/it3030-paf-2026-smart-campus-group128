@@ -30,7 +30,7 @@ const TYPE_FILTERS = [
   { key: 'LIBRARY_STUDY_ROOM', label: 'Library' },
 ]
 
-function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, onCompare, isInCompare }) {  const type   = TYPE_CONFIG[resource.type]   ?? { label: resource.type,   icon: '📦', color: 'bg-gray-50 text-gray-600',   accent: 'bg-gray-400' }
+function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, isInCompare, compareList, toggleCompare }) {  const type   = TYPE_CONFIG[resource.type]   ?? { label: resource.type,   icon: '📦', color: 'bg-gray-50 text-gray-600',   accent: 'bg-gray-400' }
   const status = STATUS_CONFIG[resource.status] ?? { label: resource.status, dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600' }
 
   // Build quick-info chips from details
@@ -91,18 +91,37 @@ function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, onCompare, 
 
         {/* Spacer */}
         <div className="flex-1" />
-        {/* Compare toggle */}
-<button
-  onClick={() => onCompare(resource)}
-  className={`w-full text-xs font-medium py-1.5 rounded-lg mb-2 transition-colors
-               border flex items-center justify-center gap-1.5
-               ${isInCompare
-                 ? 'bg-indigo-700 text-white border-indigo-700'
-                 : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
-               }`}
->
-  {isInCompare ? '✓ Added to compare' : '+ Add to compare'}
-</button>
+{/* Compare toggle */}
+{(() => {
+  const otherSelected = compareList.length === 1 && !compareList.find(r => r.id === resource.id)
+  const typeMismatch  = otherSelected && compareList[0].type !== resource.type
+  const atLimit       = compareList.length >= 2 && !compareList.find(r => r.id === resource.id)
+
+  return (
+    <button
+      onClick={() => !atLimit && toggleCompare(resource)}
+      disabled={typeMismatch || atLimit}
+      className={`w-full text-xs font-medium py-1.5 rounded-lg mb-2 transition-colors
+                   border flex items-center justify-center gap-1.5
+                   ${isInCompare
+                     ? 'bg-indigo-700 text-white border-indigo-700'
+                     : typeMismatch
+                     ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                     : atLimit
+                     ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                     : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                   }`}
+    >
+      {isInCompare
+        ? '✓ Added to compare'
+        : typeMismatch
+        ? '✗ Different type'
+        : atLimit
+        ? '— Compare full'
+        : '+ Add to compare'}
+    </button>
+  )
+})()}
 
         {/* Action buttons */}
         <div className="flex gap-2 mt-2">
@@ -165,16 +184,31 @@ export default function ResourcesPage() {
   const [showCompare, setShowCompare] = useState(false)
 
   const toggleCompare = (resource) => {
-    setCompareList(prev => {
-      const exists = prev.find(r => r.id === resource.id)
-      if (exists) return prev.filter(r => r.id !== resource.id)
-      if (prev.length >= 2) {
-        toast('You can only compare 2 resources at a time.', { icon: '⚠️' })
-        return prev
-      }
-      return [...prev, resource]
-    })
-  }
+  setCompareList(prev => {
+    const exists = prev.find(r => r.id === resource.id)
+
+    // Remove if already added
+    if (exists) return prev.filter(r => r.id !== resource.id)
+
+    // Already have 2
+    if (prev.length >= 2) {
+      toast('You can only compare 2 resources at a time.', { icon: '⚠️' })
+      return prev
+    }
+
+    // Check same type
+    if (prev.length === 1 && prev[0].type !== resource.type) {
+      const existingLabel = TYPE_CONFIG[prev[0].type]?.label ?? prev[0].type
+      const newLabel      = TYPE_CONFIG[resource.type]?.label ?? resource.type
+      toast.error(
+        `Cannot compare ${existingLabel} with ${newLabel}. Select two resources of the same type.`
+      )
+      return prev
+    }
+
+    return [...prev, resource]
+  })
+}
 
   const removeFromCompare = (id) => {
     setCompareList(prev => prev.filter(r => r.id !== id))
@@ -407,7 +441,7 @@ export default function ResourcesPage() {
   onCompare={toggleCompare}
   isInCompare={!!compareList.find(r => r.id === resource.id)}
   compareList={compareList}
-  removeFromCompare={removeFromCompare}
+  toggleCompare={toggleCompare}
 />
           ))}
         </div>
