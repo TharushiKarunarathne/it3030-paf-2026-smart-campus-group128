@@ -57,23 +57,23 @@ public class TicketService {
     // ─── GET SINGLE TICKET ───────────────────────────────────────────────────
 
     public Ticket getTicketById(String ticketId, User currentUser) {
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    Ticket ticket = ticketRepository.findById(ticketId)
+            .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
-        // Check access
-        String role = currentUser.getRole().name();
-        if (role.equals("USER") && !ticket.getReportedById().equals(currentUser.getId())) {
-            throw new RuntimeException("Access denied");
-        }
-        if (role.equals("ADMIN") &&
-                !ticket.getReportedById().equals(currentUser.getId()) &&
-                !currentUser.getId().equals(ticket.getAssignedToId())) {
-            throw new RuntimeException("Access denied");
-        }
-        // TECHNICIAN can access any ticket
+    String role = currentUser.getRole().name();
 
+    // TECHNICIAN and ADMIN can access any ticket
+    if (role.equals("TECHNICIAN") || role.equals("ADMIN")) {
         return ticket;
     }
+
+    // USER can only access their own tickets
+    if (!ticket.getReportedById().equals(currentUser.getId())) {
+        throw new RuntimeException("Access denied");
+    }
+
+    return ticket;
+}
 
     // ─── CREATE TICKET ───────────────────────────────────────────────────────
 

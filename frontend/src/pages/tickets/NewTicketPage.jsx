@@ -4,7 +4,7 @@ import { createTicket } from '../../api/ticketApi'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
-const CATEGORIES = ['Electrical', 'Plumbing', 'HVAC', 'Network', 'Furniture', 'Cleaning', 'Security', 'Other']
+const CATEGORIES = ['All', 'Lecture Halls', 'Computer Labs', 'Vehicles', 'Sports', 'Meeting Rooms', 'Library']
 
 export default function NewTicketPage() {
   const navigate = useNavigate()
