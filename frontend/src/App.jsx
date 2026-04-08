@@ -16,6 +16,12 @@ import ResourceDetailPage from './pages/resources/ResourceDetailPage'
 import NewResourcePage  from './pages/resources/NewResourcePage'
 import EditResourcePage from './pages/resources/EditResourcePage'
 
+// Member 2 — Booking Management
+import BookingsPage      from './pages/bookings/BookingsPage'
+import NewBookingPage    from './pages/bookings/NewBookingPage'
+import BookingDetailPage from './pages/bookings/BookingDetailPage'
+import AdminBookingsPage from './pages/bookings/AdminBookingsPage'
+
 // Placeholder pages for teammates
 const Placeholder = ({ label }) => (
   <div className="card text-center py-16">
@@ -72,13 +78,10 @@ export default function App() {
                 <Route path="/resources/new"      element={<NewResourcePage />} />
 <Route path="/resources/:id/edit" element={<EditResourcePage />} />
 
-                {/* Member 2 — Booking Management */}
-                <Route path="/bookings"
-                  element={<Placeholder label="Member 2 — Bookings" />} />
-                <Route path="/bookings/new"
-                  element={<Placeholder label="Member 2 — New Booking" />} />
-                <Route path="/bookings/:id"
-                  element={<Placeholder label="Member 2 — Booking Detail" />} />
+                {/* Member 2 — Bookings (all logged-in users) */}
+                <Route path="/bookings"       element={<BookingsPage />} />
+                <Route path="/bookings/new"   element={<NewBookingPage />} />
+                <Route path="/bookings/:id"   element={<BookingDetailPage />} />
 
                 {/* Member 3 — Incident Ticketing */}
                 <Route path="/tickets"
@@ -96,6 +99,8 @@ export default function App() {
               {/* Admin-only pages resources */}
                 <Route path="/resources/new"      element={<NewResourcePage />} />
                 <Route path="/resources/:id/edit" element={<EditResourcePage />} />
+
+                <Route path="/admin/bookings" element={<AdminBookingsPage />} />
 
                 <Route path="/admin/users" element={<UserManagement />} />
               </Route>
