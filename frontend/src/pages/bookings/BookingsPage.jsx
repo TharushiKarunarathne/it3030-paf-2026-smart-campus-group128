@@ -55,15 +55,41 @@ function calcDuration(start, end) {
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
+// ── Reusable Modal ─────────────────────────────────────
+function Modal({ open, onClose, children }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center
+                    justify-center z-50 p-4"
+         onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl"
+           onClick={e => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function BookingsPage() {
   const { isAdmin } = useAuth()
   const [bookings, setBookings]     = useState([])
   const [loading, setLoading]       = useState(true)
   const [tab, setTab]               = useState('ALL')
-  const [rejectId, setRejectId]     = useState(null)
-  const [rejectNote, setRejectNote] = useState('')
-  const [actioning, setActioning]   = useState(false)
   const [search, setSearch]         = useState('')
+  const [actioning, setActioning]   = useState(false)
+
+  // Approve modal state
+  const [approveModal, setApproveModal]   = useState(false)
+  const [approveBooking, setApproveBooking] = useState(null)
+
+  // Revert modal state
+  const [revertModal, setRevertModal]   = useState(false)
+  const [revertBooking, setRevertBooking] = useState(null)
+
+  // Reject modal state
+  const [rejectModal, setRejectModal] = useState(false)
+  const [rejectBooking, setRejectBooking] = useState(null)
+  const [rejectNote, setRejectNote]   = useState('')
 
   useEffect(() => { fetchBookings() }, [])
 
@@ -82,22 +108,39 @@ export default function BookingsPage() {
     }
   }
 
-  const handleApprove = async (id) => {
+  // ── Open modals ────────────────────────────────────
+
+  const openApprove = (booking) => {
+    setApproveBooking(booking)
+    setApproveModal(true)
+  }
+
+  const openReject = (booking) => {
+    setRejectBooking(booking)
+    setRejectNote('')
+    setRejectModal(true)
+  }
+
+  const openRevert = (booking) => {
+    setRevertBooking(booking)
+    setRevertModal(true)
+  }
+
+  // ── Actions ────────────────────────────────────────
+
+  const handleApproveConfirm = async () => {
     try {
       setActioning(true)
-      const { data } = await updateBookingStatus(id, 'APPROVED', '')
-      setBookings(prev => prev.map(b => b.id === id ? data : b))
+      const { data } = await updateBookingStatus(approveBooking.id, 'APPROVED', '')
+      setBookings(prev => prev.map(b => b.id === approveBooking.id ? data : b))
       toast.success('Booking approved!')
+      setApproveModal(false)
+      setApproveBooking(null)
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to approve.')
     } finally {
       setActioning(false)
     }
-  }
-
-  const handleRejectOpen = (id) => {
-    setRejectId(id)
-    setRejectNote('')
   }
 
   const handleRejectConfirm = async () => {
@@ -107,11 +150,12 @@ export default function BookingsPage() {
     }
     try {
       setActioning(true)
-      const { data } = await updateBookingStatus(rejectId, 'REJECTED', rejectNote)
-      setBookings(prev => prev.map(b => b.id === rejectId ? data : b))
-      setRejectId(null)
-      setRejectNote('')
+      const { data } = await updateBookingStatus(rejectBooking.id, 'REJECTED', rejectNote)
+      setBookings(prev => prev.map(b => b.id === rejectBooking.id ? data : b))
       toast.success('Booking rejected.')
+      setRejectModal(false)
+      setRejectBooking(null)
+      setRejectNote('')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to reject.')
     } finally {
@@ -119,8 +163,22 @@ export default function BookingsPage() {
     }
   }
 
+  const handleRevertConfirm = async () => {
+    try {
+      setActioning(true)
+      const { data } = await updateBookingStatus(revertBooking.id, 'PENDING', '')
+      setBookings(prev => prev.map(b => b.id === revertBooking.id ? data : b))
+      toast.success('Booking reverted to Pending.')
+      setRevertModal(false)
+      setRevertBooking(null)
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to revert.')
+    } finally {
+      setActioning(false)
+    }
+  }
+
   const handleCancel = async (id) => {
-    if (!window.confirm('Cancel this booking?')) return
     try {
       await deleteBooking(id)
       setBookings(prev => prev.filter(b => b.id !== id))
@@ -151,6 +209,7 @@ export default function BookingsPage() {
 
   return (
     <div>
+
       {/* ── Hero ─────────────────────────────────────── */}
       <div className="rounded-2xl overflow-hidden mb-6"
            style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}>
@@ -166,7 +225,6 @@ export default function BookingsPage() {
                   : 'Track and manage your resource reservations'}
               </p>
             </div>
-            {/* Both admin and user can make a new booking */}
             <Link
               to="/bookings/new"
               className="flex items-center gap-2 bg-white/15 hover:bg-white/25
@@ -175,8 +233,6 @@ export default function BookingsPage() {
               + New Booking
             </Link>
           </div>
-
-          {/* Stats */}
           <div className="flex gap-8">
             {[
               { label: 'Pending',  count: counts.PENDING,  color: 'text-amber-300' },
@@ -235,7 +291,7 @@ export default function BookingsPage() {
         Showing {filtered.length} bookings
       </p>
 
-      {/* ── List ──────────────────────────────────────── */}
+      {/* ── Booking List ──────────────────────────────── */}
       {loading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -276,7 +332,6 @@ export default function BookingsPage() {
                 className="bg-white rounded-2xl border border-gray-100
                            hover:shadow-md transition-all duration-200">
 
-                {/* Status bar */}
                 <div className={`h-0.5 rounded-t-2xl ${
                   booking.status === 'APPROVED' ? 'bg-green-400' :
                   booking.status === 'REJECTED' ? 'bg-red-400'   : 'bg-amber-400'
@@ -285,13 +340,11 @@ export default function BookingsPage() {
                 <div className="p-4">
                   <div className="flex items-start gap-4">
 
-                    {/* Icon */}
                     <div className={`w-10 h-10 rounded-xl flex items-center
                                      justify-center text-xl flex-shrink-0 ${iconBg}`}>
                       {icon}
                     </div>
 
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <h3 className="font-semibold text-gray-900 text-sm">
@@ -305,7 +358,6 @@ export default function BookingsPage() {
                         </span>
                       </div>
 
-                      {/* Admin sees who made the booking */}
                       {isAdmin && (
                         <p className="text-xs text-indigo-600 font-medium mb-0.5">
                           👤 {booking.userName ?? booking.userEmail ?? 'Unknown user'}
@@ -341,11 +393,11 @@ export default function BookingsPage() {
                         View
                       </Link>
 
-                      {/* Admin approve / reject */}
+                      {/* Admin PENDING — approve + reject */}
                       {isAdmin && booking.status === 'PENDING' && (
                         <>
                           <button
-                            onClick={() => handleApprove(booking.id)}
+                            onClick={() => openApprove(booking)}
                             disabled={actioning}
                             className="text-xs px-3 py-1.5 rounded-lg bg-green-50
                                        text-green-700 border border-green-200
@@ -354,7 +406,7 @@ export default function BookingsPage() {
                             ✓ Approve
                           </button>
                           <button
-                            onClick={() => handleRejectOpen(booking.id)}
+                            onClick={() => openReject(booking)}
                             disabled={actioning}
                             className="text-xs px-3 py-1.5 rounded-lg bg-red-50
                                        text-red-600 border border-red-200
@@ -365,7 +417,20 @@ export default function BookingsPage() {
                         </>
                       )}
 
-                      {/* User cancel — only pending */}
+                      {/* Admin APPROVED or REJECTED — revert */}
+                      {isAdmin && booking.status !== 'PENDING' && (
+                        <button
+                          onClick={() => openRevert(booking)}
+                          disabled={actioning}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-orange-50
+                                     text-orange-600 border border-orange-200
+                                     hover:bg-orange-100 transition-colors font-medium
+                                     disabled:opacity-50">
+                          ↩ Revert
+                        </button>
+                      )}
+
+                      {/* User — cancel own PENDING booking */}
                       {!isAdmin && booking.status === 'PENDING' && (
                         <button
                           onClick={() => handleCancel(booking.id)}
@@ -384,24 +449,96 @@ export default function BookingsPage() {
         </div>
       )}
 
+      {/* ── Approve Modal ─────────────────────────────── */}
+      <Modal open={approveModal} onClose={() => setApproveModal(false)}>
+        {approveBooking && (
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center
+                              justify-center text-green-600 text-xl">
+                ✓
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Approve Booking</h3>
+                <p className="text-xs text-gray-400">
+                  Please confirm the details before approving
+                </p>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2.5">
+              {[
+                { label: 'Resource',     value: approveBooking.resourceName },
+                { label: 'Requested by', value: approveBooking.userName ?? approveBooking.userEmail },
+                { label: 'Date',         value: formatDate(approveBooking.startTime) },
+                { label: 'Time',         value: `${formatTime(approveBooking.startTime)} – ${formatTime(approveBooking.endTime)}` },
+                { label: 'Duration',     value: calcDuration(approveBooking.startTime, approveBooking.endTime) },
+                { label: 'Purpose',      value: approveBooking.purpose },
+              ].filter(row => row.value).map(row => (
+                <div key={row.label} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{row.label}</span>
+                  <span className="font-medium text-gray-900 text-right max-w-[55%]">
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleApproveConfirm}
+                disabled={actioning}
+                className="flex-1 py-2.5 text-sm font-medium rounded-xl
+                           bg-green-600 text-white hover:bg-green-700
+                           transition-colors disabled:opacity-50">
+                {actioning ? 'Approving...' : '✓ Yes, approve'}
+              </button>
+              <button
+                onClick={() => { setApproveModal(false); setApproveBooking(null) }}
+                className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
+                           text-gray-600 hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* ── Reject Modal ──────────────────────────────── */}
-      {rejectId && (
-        <div className="fixed inset-0 bg-black/40 flex items-center
-                        justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="font-bold text-gray-900 text-lg mb-1">
-              Reject booking
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Provide a reason so the user understands why.
-            </p>
-            <textarea
-              className="input resize-none mb-4"
-              rows={3}
-              placeholder="e.g. Room reserved for faculty on that day..."
-              value={rejectNote}
-              onChange={e => setRejectNote(e.target.value)}
-            />
+      <Modal open={rejectModal} onClose={() => setRejectModal(false)}>
+        {rejectBooking && (
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center
+                              justify-center text-red-600 text-xl">
+                ✗
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Reject Booking</h3>
+                <p className="text-xs text-gray-400">
+                  {rejectBooking.resourceName} · {rejectBooking.userName ?? rejectBooking.userEmail}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                Reason for rejection <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                className="input resize-none"
+                rows={3}
+                placeholder="e.g. Room reserved for faculty on that day..."
+                value={rejectNote}
+                onChange={e => setRejectNote(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                This reason will be shown to the user.
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={handleRejectConfirm}
@@ -409,18 +546,69 @@ export default function BookingsPage() {
                 className="flex-1 py-2.5 text-sm font-medium rounded-xl
                            bg-red-600 text-white hover:bg-red-700
                            transition-colors disabled:opacity-50">
-                {actioning ? 'Rejecting...' : 'Confirm rejection'}
+                {actioning ? 'Rejecting...' : '✗ Confirm rejection'}
               </button>
               <button
-                onClick={() => { setRejectId(null); setRejectNote('') }}
+                onClick={() => { setRejectModal(false); setRejectBooking(null); setRejectNote('') }}
                 className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
                            text-gray-600 hover:bg-gray-200 transition-colors">
                 Cancel
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* ── Revert Modal ──────────────────────────────── */}
+      <Modal open={revertModal} onClose={() => setRevertModal(false)}>
+        {revertBooking && (
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center
+                              justify-center text-orange-600 text-xl">
+                ↩
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Revert Booking</h3>
+                <p className="text-xs text-gray-400">
+                  This will undo the {revertBooking.status.toLowerCase()} decision
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-5">
+              <p className="text-sm text-orange-800 leading-relaxed">
+                <span className="font-semibold">{revertBooking.resourceName}</span>
+                {' '}booked by{' '}
+                <span className="font-semibold">
+                  {revertBooking.userName ?? revertBooking.userEmail}
+                </span>
+                {' '}will be moved back to{' '}
+                <span className="font-semibold">Pending</span>.
+                The admin note will be cleared and the booking will need to be reviewed again.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleRevertConfirm}
+                disabled={actioning}
+                className="flex-1 py-2.5 text-sm font-medium rounded-xl
+                           bg-orange-500 text-white hover:bg-orange-600
+                           transition-colors disabled:opacity-50">
+                {actioning ? 'Reverting...' : '↩ Yes, revert to Pending'}
+              </button>
+              <button
+                onClick={() => { setRevertModal(false); setRevertBooking(null) }}
+                className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
+                           text-gray-600 hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   )
 }

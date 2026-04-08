@@ -23,32 +23,22 @@ public class BookingService {
         this.resourceRepository = resourceRepository;
     }
 
-    // ── Get bookings for logged-in user ────────────────
-
     public List<Booking> getMyBookings(String userId) {
         return bookingRepository.findByUserId(userId);
     }
 
-    // ── Get ALL bookings (admin only) ──────────────────
-
     public List<Booking> getAllBookings() {
         return bookingRepository.findAll();
     }
-
-    // ── Get single booking ─────────────────────────────
 
     public Booking getBookingById(String id) {
         return bookingRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Booking not found"));
     }
 
-    // ── Get bookings for a resource (availability check) ──
-
     public List<Booking> getBookingsByResource(String resourceId) {
         return bookingRepository.findByResourceIdOrderByStartTimeAsc(resourceId);
     }
-
-    // ── Create booking ─────────────────────────────────
 
     public Booking createBooking(Map<String, Object> body, User user) {
 
@@ -56,8 +46,6 @@ public class BookingService {
         String startStr   = (String) body.get("startTime");
         String endStr     = (String) body.get("endTime");
         String purpose    = (String) body.get("purpose");
-
-        // ── Validation ─────────────────────────────────
 
         if (resourceId == null || resourceId.isBlank())
             throw new RuntimeException("Resource ID is required");
@@ -69,40 +57,30 @@ public class BookingService {
         LocalDateTime startTime = LocalDateTime.parse(startStr.replace("Z", ""));
         LocalDateTime endTime   = LocalDateTime.parse(endStr.replace("Z", ""));
 
-        // End must be after start
         if (!endTime.isAfter(startTime))
             throw new RuntimeException("End time must be after start time");
 
-        // Cannot book in the past
         if (startTime.isBefore(LocalDateTime.now()))
             throw new RuntimeException("Cannot book a time slot in the past");
 
-        // Minimum 30 minutes
         long minutes = java.time.Duration.between(startTime, endTime).toMinutes();
         if (minutes < 30)
             throw new RuntimeException("Minimum booking duration is 30 minutes");
-
-        // Maximum 8 hours
         if (minutes > 480)
             throw new RuntimeException("Maximum booking duration is 8 hours");
-
-        // ── Resource check ─────────────────────────────
 
         Resource resource = resourceRepository.findById(resourceId)
             .orElseThrow(() -> new RuntimeException("Resource not found"));
 
         if (resource.getStatus() != Resource.ResourceStatus.AVAILABLE)
             throw new RuntimeException(
-                "Resource is not available for booking (status: " + resource.getStatus() + ")"
+                "Resource is not available for booking (status: "
+                + resource.getStatus() + ")"
             );
-
-        // ── Conflict detection ─────────────────────────
-        // Check if any APPROVED booking already exists for this slot
 
         List<Booking> conflicts = bookingRepository.findConflictingBookings(
             resourceId, startTime, endTime
         );
-
         if (!conflicts.isEmpty()) {
             Booking conflict = conflicts.get(0);
             throw new RuntimeException(
@@ -110,8 +88,6 @@ public class BookingService {
                 conflict.getStartTime() + " to " + conflict.getEndTime()
             );
         }
-
-        // ── Build and save ─────────────────────────────
 
         Booking booking = new Booking();
         booking.setResourceId(resourceId);
@@ -129,8 +105,6 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // ── Update booking status (admin only) ────────────
-
     public Booking updateStatus(String id, String status, String adminNote, User admin) {
         Booking booking = getBookingById(id);
 
@@ -141,30 +115,35 @@ public class BookingService {
             throw new RuntimeException("Invalid status: " + status);
         }
 
-        // Can only update PENDING bookings
+        // ── Revert to PENDING — always allowed for admin ──────
+        if (newStatus == Booking.BookingStatus.PENDING) {
+            booking.setStatus(Booking.BookingStatus.PENDING);
+            booking.setAdminNote(null);
+            return bookingRepository.save(booking);
+        }
+
+        // ── Normal flow — booking must currently be PENDING ───
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new RuntimeException(
-                "Cannot update a booking that is already " + booking.getStatus()
+                "This booking is already " + booking.getStatus() +
+                ". Use the Revert button first."
             );
         }
 
-        // Rejection requires a reason
+        // Rejection must have a reason
         if (newStatus == Booking.BookingStatus.REJECTED &&
             (adminNote == null || adminNote.isBlank())) {
             throw new RuntimeException("Please provide a reason for rejection");
         }
 
-        // If approving — re-check for conflicts (another booking may have
-        // been approved in the meantime)
+        // Re-check conflicts before approving
         if (newStatus == Booking.BookingStatus.APPROVED) {
             List<Booking> conflicts = bookingRepository.findConflictingBookings(
                 booking.getResourceId(),
                 booking.getStartTime(),
                 booking.getEndTime()
             );
-            // Exclude this booking itself from conflict check
             conflicts.removeIf(c -> c.getId().equals(id));
-
             if (!conflicts.isEmpty()) {
                 throw new RuntimeException(
                     "Cannot approve — time slot conflicts with another approved booking"
@@ -180,8 +159,6 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    // ── Delete / cancel booking ────────────────────────
-
     public void deleteBooking(String id, User requestingUser) {
         Booking booking = getBookingById(id);
 
@@ -189,14 +166,11 @@ public class BookingService {
                           requestingUser.getRole().name().equals("ADMIN");
         boolean isOwner = booking.getUserId().equals(requestingUser.getId());
 
-        // Only owner (if PENDING) or admin can cancel
-        if (!isAdmin && !isOwner) {
+        if (!isAdmin && !isOwner)
             throw new RuntimeException("You are not allowed to cancel this booking");
-        }
 
-        if (!isAdmin && booking.getStatus() == Booking.BookingStatus.APPROVED) {
+        if (!isAdmin && booking.getStatus() == Booking.BookingStatus.APPROVED)
             throw new RuntimeException("Cannot cancel an already approved booking");
-        }
 
         bookingRepository.deleteById(id);
     }

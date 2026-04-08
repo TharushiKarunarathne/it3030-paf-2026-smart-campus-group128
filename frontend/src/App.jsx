@@ -20,7 +20,6 @@ import EditResourcePage from './pages/resources/EditResourcePage'
 import BookingsPage      from './pages/bookings/BookingsPage'
 import NewBookingPage    from './pages/bookings/NewBookingPage'
 import BookingDetailPage from './pages/bookings/BookingDetailPage'
-import AdminBookingsPage from './pages/bookings/AdminBookingsPage'
 
 // Placeholder pages for teammates
 const Placeholder = ({ label }) => (
@@ -100,7 +99,6 @@ export default function App() {
                 <Route path="/resources/new"      element={<NewResourcePage />} />
                 <Route path="/resources/:id/edit" element={<EditResourcePage />} />
 
-                <Route path="/admin/bookings" element={<AdminBookingsPage />} />
 
                 <Route path="/admin/users" element={<UserManagement />} />
               </Route>
