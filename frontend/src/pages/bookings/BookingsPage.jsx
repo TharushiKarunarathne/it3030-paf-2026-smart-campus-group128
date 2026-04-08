@@ -37,9 +37,12 @@ const TYPE_BG = {
 const TABS = ['ALL', 'PENDING', 'APPROVED', 'CHECKED_IN', 'REJECTED']
 
 function formatDate(dt) {
-  return new Date(dt).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
+  if (!dt) return ''
+  const [datePart] = dt.split('T')
+  const [y, m, d] = datePart.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                  'Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${d} ${months[parseInt(m) - 1]} ${y}`
 }
 
 function formatTime(dt) {
@@ -102,7 +105,7 @@ export default function BookingsPage() {
   const [revertModal, setRevertModal]     = useState(false)
   const [revertBooking, setRevertBooking] = useState(null)
 
-  // Delete modal — REJECTED bookings only
+  // Delete modal — REJECTED and CHECKED_IN bookings
   const [deleteModal, setDeleteModal]   = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
@@ -422,7 +425,6 @@ export default function BookingsPage() {
                         </p>
                       )}
 
-                      {/* Checked in success message */}
                       {booking.status === 'CHECKED_IN' && (
                         <p className="text-xs text-blue-500 mt-0.5 font-medium">
                           ✅ Checked in successfully
@@ -482,9 +484,11 @@ export default function BookingsPage() {
                         </button>
                       )}
 
-                      {/* Admin — delete REJECTED bookings only
-                          cannot delete PENDING, APPROVED or CHECKED_IN */}
-                      {isAdmin && booking.status === 'REJECTED' && (
+                      {/* Admin — delete REJECTED or CHECKED_IN bookings */}
+                      {isAdmin && (
+                        booking.status === 'REJECTED' ||
+                        booking.status === 'CHECKED_IN'
+                      ) && (
                         <button
                           onClick={() => openDelete(booking)}
                           disabled={actioning}
@@ -679,7 +683,7 @@ export default function BookingsPage() {
         )}
       </Modal>
 
-      {/* ── Delete Modal — REJECTED only ──────────────── */}
+      {/* ── Delete Modal — REJECTED and CHECKED_IN ────── */}
       <Modal open={deleteModal} onClose={() => setDeleteModal(false)}>
         {deleteTarget && (
           <div className="p-6">
@@ -695,6 +699,21 @@ export default function BookingsPage() {
                 </p>
               </div>
             </div>
+
+            {/* Extra strong warning for CHECKED_IN */}
+            {deleteTarget.status === 'CHECKED_IN' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl
+                              p-4 mb-4">
+                <p className="text-sm text-blue-800 font-semibold mb-1">
+                  ℹ️ This booking was checked in
+                </p>
+                <p className="text-sm text-blue-700 leading-relaxed">
+                  Deleting this record will remove all evidence that this
+                  resource was used. This will affect usage history and
+                  analytics. Only delete if absolutely necessary.
+                </p>
+              </div>
+            )}
 
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
               <p className="text-sm text-red-800 font-semibold mb-1">

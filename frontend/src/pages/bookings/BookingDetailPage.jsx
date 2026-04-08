@@ -22,6 +22,23 @@ const TYPE_BG = {
   MEETING_ROOM: '#f0f9ff', VEHICLE: '#fffbeb', LIBRARY_STUDY_ROOM: '#f0fdfa',
 }
 
+function Modal({ open, onClose, children }) {
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-md shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function formatDateTime(dt) {
   if (!dt) return '—'
   return new Date(dt).toLocaleString('en-GB', {
@@ -70,6 +87,9 @@ export default function BookingDetailPage() {
   const [adminNote, setAdminNote]           = useState('')
   const [showRejectInput, setShowRejectInput] = useState(false)
   const [actioning, setActioning]           = useState(false)
+
+  // Delete modal
+  const [deleteModal, setDeleteModal] = useState(false)
 
   const verifyUrl = `${window.location.origin}/verify/${id}`
 
@@ -129,6 +149,20 @@ export default function BookingDetailPage() {
       toast.error(err.response?.data?.error || 'Failed to revert.')
     } finally {
       setActioning(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setActioning(true)
+      await deleteBooking(id)
+      toast.success('Booking permanently deleted.')
+      navigate('/bookings')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete.')
+    } finally {
+      setActioning(false)
+      setDeleteModal(false)
     }
   }
 
@@ -303,7 +337,6 @@ export default function BookingDetailPage() {
                 </span>
               </div>
             </div>
-
             <div className="flex-shrink-0 bg-white p-3 rounded-2xl
                             border border-green-100 shadow-sm">
               <QRCodeSVG
@@ -381,8 +414,7 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          {/* Revert — only for APPROVED and REJECTED
-              CHECKED_IN cannot be reverted — booking is complete */}
+          {/* Revert — only APPROVED and REJECTED */}
           {(booking.status === 'APPROVED' ||
             booking.status === 'REJECTED') && (
             <button
@@ -396,18 +428,40 @@ export default function BookingDetailPage() {
             </button>
           )}
 
-          {/* CHECKED_IN — no actions available */}
+          {/* CHECKED_IN — delete only */}
           {booking.status === 'CHECKED_IN' && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl
-                            px-4 py-3 text-center">
-              <p className="text-sm font-semibold text-blue-700">
-                ✅ Booking Completed
-              </p>
-              <p className="text-xs text-blue-500 mt-0.5">
-                This booking has been checked in and is now complete.
-                No further actions are available.
-              </p>
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl
+                              px-4 py-3 text-center">
+                <p className="text-sm font-semibold text-blue-700">
+                  ✅ Booking Completed
+                </p>
+                <p className="text-xs text-blue-500 mt-0.5">
+                  This booking has been checked in and is complete.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeleteModal(true)}
+                disabled={actioning}
+                className="w-full py-2.5 text-sm font-medium rounded-xl
+                           bg-red-50 text-red-600 border border-red-200
+                           hover:bg-red-100 transition-colors disabled:opacity-50">
+                🗑 Delete this record
+              </button>
             </div>
+          )}
+
+          {/* REJECTED — delete option */}
+          {booking.status === 'REJECTED' && (
+            <button
+              onClick={() => setDeleteModal(true)}
+              disabled={actioning}
+              className="w-full py-2.5 text-sm font-medium rounded-xl
+                         bg-red-50 text-red-600 border border-red-200
+                         hover:bg-red-100 transition-colors disabled:opacity-50
+                         mt-3">
+              🗑 Delete this record
+            </button>
           )}
         </div>
       )}
@@ -420,6 +474,86 @@ export default function BookingDetailPage() {
           View resource details →
         </Link>
       </div>
+
+      {/* ── Delete Modal ──────────────────────────────── */}
+      <Modal open={deleteModal} onClose={() => setDeleteModal(false)}>
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center
+                            justify-center text-red-600 text-xl flex-shrink-0">
+              🗑
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-lg">Delete Booking</h3>
+              <p className="text-xs text-gray-400">
+                This action is permanent and cannot be undone
+              </p>
+            </div>
+          </div>
+
+          {/* Extra warning for CHECKED_IN */}
+          {booking.status === 'CHECKED_IN' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl
+                            p-4 mb-4">
+              <p className="text-sm text-blue-800 font-semibold mb-1">
+                ℹ️ This booking was checked in
+              </p>
+              <p className="text-sm text-blue-700 leading-relaxed">
+                Deleting this record will remove all evidence that this
+                resource was used. This will affect usage history and
+                analytics. Only delete if absolutely necessary.
+              </p>
+            </div>
+          )}
+
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
+            <p className="text-sm text-red-800 font-semibold mb-1">
+              ⚠️ Permanent deletion
+            </p>
+            <p className="text-sm text-red-700 leading-relaxed">
+              You are about to permanently delete the booking for{' '}
+              <span className="font-semibold">{booking.resourceName}</span>
+              {' '}by{' '}
+              <span className="font-semibold">
+                {booking.userName ?? booking.userEmail}
+              </span>.
+              {' '}This record will be gone forever.
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2">
+            {[
+              { label: 'Resource', value: booking.resourceName },
+              { label: 'User',     value: booking.userName ?? booking.userEmail },
+              { label: 'Date',     value: formatDate(booking.startTime) },
+              { label: 'Time',     value: `${formatTime(booking.startTime)} – ${formatTime(booking.endTime)}` },
+              { label: 'Status',   value: booking.status },
+            ].map(row => (
+              <div key={row.label} className="flex justify-between text-sm">
+                <span className="text-gray-500">{row.label}</span>
+                <span className="font-medium text-gray-900">{row.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleDeleteConfirm}
+              disabled={actioning}
+              className="flex-1 py-2.5 text-sm font-medium rounded-xl
+                         bg-red-600 text-white hover:bg-red-700
+                         transition-colors disabled:opacity-50">
+              {actioning ? 'Deleting...' : '🗑 Yes, delete permanently'}
+            </button>
+            <button
+              onClick={() => setDeleteModal(false)}
+              className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
+                         text-gray-600 hover:bg-gray-200 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
 
     </div>
   )
