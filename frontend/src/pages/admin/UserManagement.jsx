@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getAllUsers, updateUserRole, deleteUser, createUser } from '../../api/authApi'
+import { getAllUsers, updateUserRole, updateUser, deleteUser, createUser } from '../../api/authApi'
 import toast from 'react-hot-toast'
 
 const ROLES = ['USER', 'TECHNICIAN', 'ADMIN']
@@ -102,19 +102,40 @@ function AddUserModal({ onClose, onAdded }) {
 
 // Edit User Modal
 function EditUserModal({ user, onClose, onUpdated }) {
-  const [name, setName]   = useState(user.name || '')
-  const [email, setEmail] = useState(user.email || '')
-  const [role, setRole]   = useState(user.role || 'USER')
-  const [loading, setLoading] = useState(false)
+  const [name, setName]         = useState(user.name || '')
+  const [email, setEmail]       = useState(user.email || '')
+  const [role, setRole]         = useState(user.role || 'USER')
+  const [password, setPassword] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [loading, setLoading]   = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    if (password && password !== confirmPw) {
+      toast.error('Passwords do not match.')
+      return
+    }
+    if (password && password.length < 6) {
+      toast.error('Password must be at least 6 characters.')
+      return
+    }
+
     try {
       setLoading(true)
+
+      // Build update body
+      const body = { name, email }
+      if (password) body.password = password
+
+      // Update profile details
+      await updateUser(user.id, body)
+
       // Update role if changed
       if (role !== user.role) {
         await updateUserRole(user.id, role)
       }
+
       toast.success('User updated successfully.')
       onUpdated({ ...user, name, email, role })
       onClose()
@@ -162,6 +183,43 @@ function EditUserModal({ user, onClose, onUpdated }) {
               ))}
             </select>
           </div>
+
+          {/* Password section */}
+          <div className="pt-3 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              Reset password
+              <span className="text-gray-400 font-normal ml-1">
+                (leave blank to keep current)
+              </span>
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New password
+                </label>
+                <input
+                  type="password"
+                  className="input"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm password
+                </label>
+                <input
+                  type="password"
+                  className="input"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="btn-secondary flex-1">
