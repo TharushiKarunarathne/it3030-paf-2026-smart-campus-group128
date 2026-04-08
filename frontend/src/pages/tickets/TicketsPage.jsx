@@ -52,19 +52,17 @@ export default function TicketsPage() {
       const { data } = await getTickets()
       const all = Array.isArray(data) ? data : []
 
-      // Filter by role on the frontend
+      // Filter by role on the frontend (mirrors backend logic)
+      // ADMIN   → all tickets (backend already returns all)
+      // TECH    → only tickets assigned to them
       // USER    → only their own tickets
-      // ADMIN   → tickets they created OR assigned to them
-      // TECH    → all tickets
       let visible = all
       if (isUser) {
         visible = all.filter(t => t.reportedById === user?.id)
-      } else if (isAdmin) {
-        visible = all.filter(t =>
-          t.reportedById === user?.id || t.assignedToId === user?.id
-        )
+      } else if (isTechnician) {
+        visible = all.filter(t => t.assignedToId === user?.id)
       }
-      // technician sees all — no filter
+      // admin sees all — no filter
 
       setTickets(visible)
     } catch {
@@ -85,16 +83,16 @@ export default function TicketsPage() {
   })
 
   // Role-specific heading
-  const heading = isTechnician
+  const heading = isAdmin
     ? 'All Incident Tickets'
-    : isAdmin
-    ? 'My Tickets'
+    : isTechnician
+    ? 'My Assigned Tickets'
     : 'My Reported Issues'
 
-  const subtext = isTechnician
+  const subtext = isAdmin
     ? `${tickets.length} total · ${tickets.filter(t => t.status === 'OPEN').length} open`
-    : isAdmin
-    ? 'Tickets you submitted or that are assigned to you'
+    : isTechnician
+    ? 'Tickets assigned to you'
     : 'Issues you have reported'
 
   return (
@@ -114,19 +112,6 @@ export default function TicketsPage() {
         )}
       </div>
 
-      {/* Technician info banner */}
-      {isTechnician && (
-        <div className="card border-blue-200 bg-blue-50/40 mb-4 flex items-center gap-3 p-4">
-          <span className="text-2xl">🔧</span>
-          <div>
-            <p className="text-sm font-semibold text-blue-900">Technician View</p>
-            <p className="text-xs text-blue-600">
-              You can see all tickets. Update status to track your progress.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Admin info banner */}
       {isAdmin && (
         <div className="card border-purple-200 bg-purple-50/40 mb-4 flex items-center gap-3 p-4">
@@ -134,7 +119,20 @@ export default function TicketsPage() {
           <div>
             <p className="text-sm font-semibold text-purple-900">Admin View</p>
             <p className="text-xs text-purple-600">
-              Showing tickets you created or that are assigned to you.
+              You can see all tickets. Assign technicians to handle issues.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Technician info banner */}
+      {isTechnician && (
+        <div className="card border-blue-200 bg-blue-50/40 mb-4 flex items-center gap-3 p-4">
+          <span className="text-2xl">🔧</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">Technician View</p>
+            <p className="text-xs text-blue-600">
+              Showing tickets assigned to you. Update status to track your progress.
             </p>
           </div>
         </div>
