@@ -3,6 +3,7 @@ package com.smartcampus.config;
 import com.smartcampus.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -41,6 +42,10 @@ public class SecurityConfig {
 
                 // Resources — read is public, write is admin only (handled by @PreAuthorize)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/resources/**").permitAll()
+                
+                // Bookings — all authenticated users
+                .requestMatchers(HttpMethod.GET, "/api/bookings/all").hasRole("ADMIN")
+                .requestMatchers("/api/bookings/**").authenticated()
                 
                 .requestMatchers("/api/users").hasRole("ADMIN")
                 .requestMatchers("/api/users/*/role").hasRole("ADMIN")
