@@ -38,6 +38,10 @@ public class SecurityConfig {
                 s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+
+                // Resources — read is public, write is admin only (handled by @PreAuthorize)
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/resources/**").permitAll()
+                
                 .requestMatchers("/api/users").hasRole("ADMIN")
                 .requestMatchers("/api/users/*/role").hasRole("ADMIN")
                 .anyRequest().authenticated()

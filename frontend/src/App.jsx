@@ -14,6 +14,12 @@ import TicketsPage      from './pages/tickets/TicketsPage'
 import NewTicketPage    from './pages/tickets/NewTicketPage'
 import TicketDetailPage from './pages/tickets/TicketDetailPage'
 
+// Member 1 — Facilities & Assets
+import ResourcesPage      from './pages/resources/ResourcesPage'
+import ResourceDetailPage from './pages/resources/ResourceDetailPage'
+import NewResourcePage  from './pages/resources/NewResourcePage'
+import EditResourcePage from './pages/resources/EditResourcePage'
+
 // Placeholder pages for teammates
 const Placeholder = ({ label }) => (
   <div className="card text-center py-16">
@@ -59,11 +65,16 @@ export default function App() {
                 <Route path="/dashboard"     element={<DashboardPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
 
+                <Route path="/resources"     element={<ResourcesPage />} />
+                <Route path="/resources/:id" element={<ResourceDetailPage />} />
+
                 {/* Member 1 — Facilities & Assets */}
                 <Route path="/resources"
                   element={<Placeholder label="Member 1 — Resources" />} />
                 <Route path="/resources/:id"
                   element={<Placeholder label="Member 1 — Resource Detail" />} />
+                <Route path="/resources/new"      element={<NewResourcePage />} />
+<Route path="/resources/:id/edit" element={<EditResourcePage />} />
 
                 {/* Member 2 — Booking Management */}
                 <Route path="/bookings"
@@ -84,6 +95,10 @@ export default function App() {
             {/* Admin only */}
             <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
               <Route element={<MainLayout />}>
+              {/* Admin-only pages resources */}
+                <Route path="/resources/new"      element={<NewResourcePage />} />
+                <Route path="/resources/:id/edit" element={<EditResourcePage />} />
+
                 <Route path="/admin/users" element={<UserManagement />} />
               </Route>
             </Route>
