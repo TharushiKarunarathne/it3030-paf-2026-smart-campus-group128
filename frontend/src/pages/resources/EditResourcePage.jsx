@@ -9,8 +9,8 @@ const RESOURCE_TYPES = {
   LECTURE_HALL: {
     label: 'Lecture Hall', icon: '🏛️',
     fields: [
-      { name: 'block',         label: 'Block',            type: 'text',     placeholder: 'e.g. Block A' },
-      { name: 'floor',         label: 'Floor',            type: 'text',     placeholder: 'e.g. Ground Floor' },
+      { name: 'block',         label: 'Block',            type: 'text',     placeholder: 'e.g. Block A, Block B' },
+      { name: 'floor',         label: 'Floor',            type: 'text',     placeholder: 'e.g. Ground Floor, 1st Floor' },
       { name: 'hasProjector',  label: 'Projector',        type: 'checkbox' },
       { name: 'hasAC',         label: 'Air Conditioning', type: 'checkbox' },
       { name: 'hasWhiteboard', label: 'Whiteboard',       type: 'checkbox' },
@@ -19,48 +19,61 @@ const RESOURCE_TYPES = {
   COMPUTER_LAB: {
     label: 'Computer Lab', icon: '🖥️',
     fields: [
-      { name: 'numberOfComputers', label: 'Number of Computers', type: 'number',   placeholder: 'e.g. 40' },
-      { name: 'software',          label: 'Software Available',  type: 'text',     placeholder: 'e.g. MS Office, AutoCAD' },
+      { name: 'numberOfComputers', label: 'Number of Computers', type: 'number',   placeholder: 'e.g. 30, 40, 60' },
+      { name: 'software',          label: 'Installed Software',  type: 'text',     placeholder: 'e.g. MS Office, Visual Studio, AutoCAD' },
+      { name: 'operatingSystem',   label: 'Operating System',    type: 'text',     placeholder: 'e.g. Windows 11, Ubuntu 22' },
       { name: 'hasProjector',      label: 'Projector',           type: 'checkbox' },
       { name: 'hasAC',             label: 'Air Conditioning',    type: 'checkbox' },
+      { name: 'hasInternetAccess', label: 'Internet Access',     type: 'checkbox' },
     ]
   },
   SPORTS_FACILITY: {
     label: 'Sports / Gym', icon: '🏋️',
     fields: [
-      { name: 'sportType',    label: 'Sport Type',         type: 'text',     placeholder: 'e.g. Basketball, Gym' },
-      { name: 'surfaceType',  label: 'Surface Type',       type: 'text',     placeholder: 'e.g. Wooden, Concrete' },
-      { name: 'isIndoor',     label: 'Indoor',             type: 'checkbox' },
-      { name: 'hasEquipment', label: 'Equipment Provided', type: 'checkbox' },
+      { name: 'sportType',      label: 'Sport / Facility Type', type: 'text',     placeholder: 'e.g. Basketball Court, Swimming Pool, Gym' },
+      { name: 'surfaceType',    label: 'Surface Type',          type: 'text',     placeholder: 'e.g. Wooden, Concrete, Artificial Grass' },
+      { name: 'dimensions',     label: 'Dimensions',            type: 'text',     placeholder: 'e.g. 28m x 15m' },
+      { name: 'isIndoor',       label: 'Indoor Facility',       type: 'checkbox' },
+      { name: 'hasEquipment',   label: 'Equipment Provided',    type: 'checkbox' },
+      { name: 'hasChangeRooms', label: 'Change Rooms',          type: 'checkbox' },
+      { name: 'hasLighting',    label: 'Flood Lighting',        type: 'checkbox' },
     ]
   },
   MEETING_ROOM: {
     label: 'Meeting Room', icon: '🪑',
     fields: [
-      { name: 'floor',              label: 'Floor',              type: 'text',     placeholder: 'e.g. 3rd Floor' },
+      { name: 'floor',              label: 'Floor',              type: 'text',     placeholder: 'e.g. 3rd Floor, Ground Floor' },
+      { name: 'roomNumber',         label: 'Room Number',        type: 'text',     placeholder: 'e.g. MR-01, Conference Room B' },
       { name: 'hasProjector',       label: 'Projector',          type: 'checkbox' },
       { name: 'hasVideoConference', label: 'Video Conferencing', type: 'checkbox' },
       { name: 'hasWhiteboard',      label: 'Whiteboard',         type: 'checkbox' },
+      { name: 'hasTV',              label: 'Smart TV / Display', type: 'checkbox' },
     ]
   },
   VEHICLE: {
     label: 'Vehicle', icon: '🚌',
     fields: [
-      { name: 'vehicleNumber',   label: 'Vehicle Number',   type: 'text',   placeholder: 'e.g. WP CAB-1234' },
-      { name: 'brand',           label: 'Brand',            type: 'text',   placeholder: 'e.g. Toyota' },
-      { name: 'model',           label: 'Model',            type: 'text',   placeholder: 'e.g. HiAce' },
-      { name: 'fuelType',        label: 'Fuel Type',        type: 'select', options: ['PETROL', 'DIESEL', 'ELECTRIC'] },
-      { name: 'seatingCapacity', label: 'Seating Capacity', type: 'number', placeholder: 'e.g. 14' },
-      { name: 'driverRequired',  label: 'Driver Required',  type: 'checkbox' },
+      { name: 'vehicleNumber',   label: 'Vehicle Number',    type: 'text',   placeholder: 'e.g. WP CAB-1234, NB-5678' },
+      { name: 'brand',           label: 'Brand',             type: 'text',   placeholder: 'e.g. Toyota, Isuzu, Tata' },
+      { name: 'model',           label: 'Model',             type: 'text',   placeholder: 'e.g. HiAce, Coaster, Defender' },
+      { name: 'year',            label: 'Year of Manufacture', type: 'number', placeholder: 'e.g. 2019' },
+      { name: 'colour',          label: 'Colour',            type: 'text',   placeholder: 'e.g. White, Blue' },
+      { name: 'fuelType',        label: 'Fuel Type',         type: 'select', options: ['PETROL', 'DIESEL', 'ELECTRIC', 'HYBRID'] },
+      { name: 'seatingCapacity', label: 'Seating Capacity',  type: 'number', placeholder: 'e.g. 14, 28, 50' },
+      { name: 'driverRequired',  label: 'Requires University Driver', type: 'checkbox' },
+      { name: 'hasAC',           label: 'Air Conditioning',  type: 'checkbox' },
     ]
   },
   LIBRARY_STUDY_ROOM: {
     label: 'Library Study Room', icon: '📚',
     fields: [
-      { name: 'floor',         label: 'Floor',           type: 'text',   placeholder: 'e.g. 2nd Floor' },
-      { name: 'numberOfSeats', label: 'Number of Seats', type: 'number', placeholder: 'e.g. 8' },
-      { name: 'isQuietZone',   label: 'Quiet Zone',      type: 'checkbox' },
-      { name: 'hasWhiteboard', label: 'Whiteboard',      type: 'checkbox' },
+      { name: 'floor',          label: 'Floor',              type: 'text',   placeholder: 'e.g. 2nd Floor, 3rd Floor' },
+      { name: 'roomNumber',     label: 'Room Number',        type: 'text',   placeholder: 'e.g. SR-01, Study Pod A' },
+      { name: 'numberOfSeats',  label: 'Number of Seats',    type: 'number', placeholder: 'e.g. 4, 6, 8, 10' },
+      { name: 'isQuietZone',    label: 'Quiet Zone',         type: 'checkbox' },
+      { name: 'hasWhiteboard',  label: 'Whiteboard',         type: 'checkbox' },
+      { name: 'hasPowerPoints', label: 'Power Outlets',      type: 'checkbox' },
+      { name: 'hasTV',          label: 'Smart TV / Display', type: 'checkbox' },
     ]
   },
 }
@@ -131,7 +144,7 @@ export default function EditResourcePage() {
       }
     }
     fetch()
-  }, [id])
+  }, [id, navigate])
 
   const handleFormChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))

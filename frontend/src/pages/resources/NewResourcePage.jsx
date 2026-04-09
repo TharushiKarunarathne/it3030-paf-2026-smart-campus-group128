@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { createResource } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
@@ -7,8 +7,8 @@ const RESOURCE_TYPES = {
   LECTURE_HALL: {
     label: 'Lecture Hall', icon: '🏛️',
     fields: [
-      { name: 'block',         label: 'Block',            type: 'text',     placeholder: 'e.g. Block A' },
-      { name: 'floor',         label: 'Floor',            type: 'text',     placeholder: 'e.g. Ground Floor' },
+      { name: 'block',         label: 'Block',            type: 'text',     placeholder: 'e.g. Block A, Block B' },
+      { name: 'floor',         label: 'Floor',            type: 'text',     placeholder: 'e.g. Ground Floor, 1st Floor' },
       { name: 'hasProjector',  label: 'Projector',        type: 'checkbox' },
       { name: 'hasAC',         label: 'Air Conditioning', type: 'checkbox' },
       { name: 'hasWhiteboard', label: 'Whiteboard',       type: 'checkbox' },
@@ -17,48 +17,61 @@ const RESOURCE_TYPES = {
   COMPUTER_LAB: {
     label: 'Computer Lab', icon: '🖥️',
     fields: [
-      { name: 'numberOfComputers', label: 'Number of Computers', type: 'number',   placeholder: 'e.g. 40' },
-      { name: 'software',          label: 'Software Available',  type: 'text',     placeholder: 'e.g. MS Office, AutoCAD' },
+      { name: 'numberOfComputers', label: 'Number of Computers', type: 'number',   placeholder: 'e.g. 30, 40, 60' },
+      { name: 'software',          label: 'Installed Software',  type: 'text',     placeholder: 'e.g. MS Office, Visual Studio, AutoCAD' },
+      { name: 'operatingSystem',   label: 'Operating System',    type: 'text',     placeholder: 'e.g. Windows 11, Ubuntu 22' },
       { name: 'hasProjector',      label: 'Projector',           type: 'checkbox' },
       { name: 'hasAC',             label: 'Air Conditioning',    type: 'checkbox' },
+      { name: 'hasInternetAccess', label: 'Internet Access',     type: 'checkbox' },
     ]
   },
   SPORTS_FACILITY: {
     label: 'Sports / Gym', icon: '🏋️',
     fields: [
-      { name: 'sportType',    label: 'Sport Type',         type: 'text',     placeholder: 'e.g. Basketball, Gym' },
-      { name: 'surfaceType',  label: 'Surface Type',       type: 'text',     placeholder: 'e.g. Wooden, Concrete' },
-      { name: 'isIndoor',     label: 'Indoor',             type: 'checkbox' },
-      { name: 'hasEquipment', label: 'Equipment Provided', type: 'checkbox' },
+      { name: 'sportType',      label: 'Sport / Facility Type', type: 'text',     placeholder: 'e.g. Basketball Court, Swimming Pool, Gym' },
+      { name: 'surfaceType',    label: 'Surface Type',          type: 'text',     placeholder: 'e.g. Wooden, Concrete, Artificial Grass' },
+      { name: 'dimensions',     label: 'Dimensions',            type: 'text',     placeholder: 'e.g. 28m x 15m' },
+      { name: 'isIndoor',       label: 'Indoor Facility',       type: 'checkbox' },
+      { name: 'hasEquipment',   label: 'Equipment Provided',    type: 'checkbox' },
+      { name: 'hasChangeRooms', label: 'Change Rooms',          type: 'checkbox' },
+      { name: 'hasLighting',    label: 'Flood Lighting',        type: 'checkbox' },
     ]
   },
   MEETING_ROOM: {
     label: 'Meeting Room', icon: '🪑',
     fields: [
-      { name: 'floor',              label: 'Floor',              type: 'text',     placeholder: 'e.g. 3rd Floor' },
+      { name: 'floor',              label: 'Floor',              type: 'text',     placeholder: 'e.g. 3rd Floor, Ground Floor' },
+      { name: 'roomNumber',         label: 'Room Number',        type: 'text',     placeholder: 'e.g. MR-01, Conference Room B' },
       { name: 'hasProjector',       label: 'Projector',          type: 'checkbox' },
       { name: 'hasVideoConference', label: 'Video Conferencing', type: 'checkbox' },
       { name: 'hasWhiteboard',      label: 'Whiteboard',         type: 'checkbox' },
+      { name: 'hasTV',              label: 'Smart TV / Display', type: 'checkbox' },
     ]
   },
   VEHICLE: {
     label: 'Vehicle', icon: '🚌',
     fields: [
-      { name: 'vehicleNumber',   label: 'Vehicle Number',   type: 'text',   placeholder: 'e.g. WP CAB-1234' },
-      { name: 'brand',           label: 'Brand',            type: 'text',   placeholder: 'e.g. Toyota' },
-      { name: 'model',           label: 'Model',            type: 'text',   placeholder: 'e.g. HiAce' },
-      { name: 'fuelType',        label: 'Fuel Type',        type: 'select', options: ['PETROL', 'DIESEL', 'ELECTRIC'] },
-      { name: 'seatingCapacity', label: 'Seating Capacity', type: 'number', placeholder: 'e.g. 14' },
-      { name: 'driverRequired',  label: 'Driver Required',  type: 'checkbox' },
+      { name: 'vehicleNumber',   label: 'Vehicle Number',    type: 'text',   placeholder: 'e.g. WP CAB-1234, NB-5678' },
+      { name: 'brand',           label: 'Brand',             type: 'text',   placeholder: 'e.g. Toyota, Isuzu, Tata' },
+      { name: 'model',           label: 'Model',             type: 'text',   placeholder: 'e.g. HiAce, Coaster, Defender' },
+      { name: 'year',            label: 'Year of Manufacture', type: 'number', placeholder: 'e.g. 2019' },
+      { name: 'colour',          label: 'Colour',            type: 'text',   placeholder: 'e.g. White, Blue' },
+      { name: 'fuelType',        label: 'Fuel Type',         type: 'select', options: ['PETROL', 'DIESEL', 'ELECTRIC', 'HYBRID'] },
+      { name: 'seatingCapacity', label: 'Seating Capacity',  type: 'number', placeholder: 'e.g. 14, 28, 50' },
+      { name: 'driverRequired',  label: 'Requires University Driver', type: 'checkbox' },
+      { name: 'hasAC',           label: 'Air Conditioning',  type: 'checkbox' },
     ]
   },
   LIBRARY_STUDY_ROOM: {
     label: 'Library Study Room', icon: '📚',
     fields: [
-      { name: 'floor',         label: 'Floor',           type: 'text',   placeholder: 'e.g. 2nd Floor' },
-      { name: 'numberOfSeats', label: 'Number of Seats', type: 'number', placeholder: 'e.g. 8' },
-      { name: 'isQuietZone',   label: 'Quiet Zone',      type: 'checkbox' },
-      { name: 'hasWhiteboard', label: 'Whiteboard',      type: 'checkbox' },
+      { name: 'floor',          label: 'Floor',              type: 'text',   placeholder: 'e.g. 2nd Floor, 3rd Floor' },
+      { name: 'roomNumber',     label: 'Room Number',        type: 'text',   placeholder: 'e.g. SR-01, Study Pod A' },
+      { name: 'numberOfSeats',  label: 'Number of Seats',    type: 'number', placeholder: 'e.g. 4, 6, 8, 10' },
+      { name: 'isQuietZone',    label: 'Quiet Zone',         type: 'checkbox' },
+      { name: 'hasWhiteboard',  label: 'Whiteboard',         type: 'checkbox' },
+      { name: 'hasPowerPoints', label: 'Power Outlets',      type: 'checkbox' },
+      { name: 'hasTV',          label: 'Smart TV / Display', type: 'checkbox' },
     ]
   },
 }
@@ -128,7 +141,6 @@ function DetailsField({ field, value, onChange }) {
 }
 
 export default function NewResourcePage() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '', type: 'LECTURE_HALL',
@@ -151,26 +163,28 @@ export default function NewResourcePage() {
     setDetails(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const handleSubmit = async () => {
-    if (!form.name || !form.type) {
-      toast.error('Name and type are required.')
-      return
-    }
-    try {
-      setLoading(true)
-      const { data } = await createResource({
-        ...form,
-        capacity: form.capacity ? parseInt(form.capacity) : null,
-        details,
-      })
-      toast.success('Resource created!')
-      navigate(`/resources/${data.id}`)
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create resource.')
-    } finally {
-      setLoading(false)
-    }
+const [created, setCreated] = useState(null)
+
+const handleSubmit = async () => {
+  if (!form.name || !form.type) {
+    toast.error('Name and type are required.')
+    return
   }
+  try {
+    setLoading(true)
+    const { data } = await createResource({
+      ...form,
+      capacity: form.capacity ? parseInt(form.capacity) : null,
+      details,
+    })
+    toast.success('Resource created!')
+    setCreated(data)
+  } catch (err) {
+    toast.error(err.response?.data?.error || 'Failed to create resource.')
+  } finally {
+    setLoading(false)
+  }
+}
 
   const currentType = RESOURCE_TYPES[form.type]
 
@@ -284,18 +298,54 @@ export default function NewResourcePage() {
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn-primary flex-1 py-2.5"
-            >
-              {loading ? 'Creating...' : '✓ Create Resource'}
-            </button>
-            <Link to="/resources" className="btn-secondary flex-1 text-center py-2.5">
-              Cancel
-            </Link>
-          </div>
+{created ? (
+  <div className="rounded-xl bg-green-50 border border-green-100 p-4 text-center">
+    <div className="text-2xl mb-2">✅</div>
+    <p className="text-sm font-semibold text-green-800 mb-1">
+      Resource created successfully!
+    </p>
+    <p className="text-xs text-green-600 mb-4">
+      {created.name} has been added to the system.
+    </p>
+    <div className="flex gap-3 justify-center">
+      <Link
+        to="/resources"
+        className="btn-primary text-sm px-5 py-2"
+      >
+        View all resources
+      </Link>
+      <Link
+        to={`/resources/${created.id}`}
+        className="btn-secondary text-sm px-5 py-2"
+      >
+        View this resource
+      </Link>
+      <button
+        onClick={() => {
+          setCreated(null)
+          setForm({ name: '', type: 'LECTURE_HALL', location: '', capacity: '', description: '', status: 'AVAILABLE' })
+          setDetails(buildEmptyDetails('LECTURE_HALL'))
+        }}
+        className="btn-secondary text-sm px-5 py-2"
+      >
+        Add another
+      </button>
+    </div>
+  </div>
+) : (
+  <div className="flex gap-3 pt-2">
+    <button
+      onClick={handleSubmit}
+      disabled={loading}
+      className="btn-primary flex-1 py-2.5"
+    >
+      {loading ? 'Creating...' : '✓ Create Resource'}
+    </button>
+    <Link to="/resources" className="btn-secondary flex-1 text-center py-2.5">
+      Cancel
+    </Link>
+  </div>
+)}
 
         </div>
       </div>

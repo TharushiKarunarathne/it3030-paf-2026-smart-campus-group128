@@ -37,7 +37,7 @@ export default function ResourceDetailPage() {
       }
     }
     fetch()
-  }, [id])
+  }, [id, navigate])
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this resource permanently?')) return
