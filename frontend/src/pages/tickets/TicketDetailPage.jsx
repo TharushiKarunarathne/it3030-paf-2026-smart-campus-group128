@@ -618,25 +618,17 @@ export default function TicketDetailPage() {
             </div>
           </div>
 
-          {/* Delete — owner only when OPEN */}
-          {isOwner && ticket.status === 'OPEN' && (
-         <button
-          onClick={async () => {
-            if (window.confirm('Are you sure you want to delete this ticket?')) {
-              try {
-            await import('../../api/ticketApi').then(api => api.deleteTicket ? api.deleteTicket(ticket.id) : null)
-            toast.success('Ticket deleted.')
-            navigate('/tickets')
-            } catch {
-            toast.error('Failed to delete ticket.')
-        }
-      }
-    }}
-    className="btn-danger w-full text-sm"
-  >
-    Delete Ticket
-  </button>
-)}
+          {/* Delete — owner when OPEN, or admin/technician when RESOLVED */}
+          {((isOwner && ticket.status === 'OPEN') ||
+            (isAdmin && (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED')) ||
+            (isTechnician && isAssigned && (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'))) && (
+            <button
+              onClick={handleDeleteTicket}
+              className="btn-danger w-full text-sm"
+            >
+              Delete Ticket
+            </button>
+          )}
 
         </div>
       </div>

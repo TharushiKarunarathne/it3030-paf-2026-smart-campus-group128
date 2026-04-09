@@ -302,15 +302,25 @@ public Ticket resolveTicket(String ticketId, String resolutionNote, User current
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
-        // Only owner or admin can delete, and only if OPEN
         boolean isOwner = ticket.getReportedById().equals(currentUser.getId());
         boolean isAdmin = currentUser.getRole() == User.Role.ADMIN;
+        boolean isTechnician = currentUser.getRole() == User.Role.TECHNICIAN;
+        boolean isAssignedTechnician = isTechnician &&
+                currentUser.getId().equals(ticket.getAssignedToId());
+        boolean isResolvedOrClosed = ticket.getStatus() == Ticket.Status.RESOLVED
+                || ticket.getStatus() == Ticket.Status.CLOSED;
 
-        if (!isOwner && !isAdmin) {
+        // Admin can delete any ticket
+        // Technician can delete tickets they resolved/closed
+        // Owner can delete their own OPEN tickets
+        if (isAdmin) {
+            // allowed
+        } else if (isAssignedTechnician && isResolvedOrClosed) {
+            // allowed
+        } else if (isOwner && ticket.getStatus() == Ticket.Status.OPEN) {
+            // allowed
+        } else {
             throw new RuntimeException("Access denied");
-        }
-        if (!isAdmin && ticket.getStatus() != Ticket.Status.OPEN) {
-            throw new RuntimeException("Only open tickets can be deleted");
         }
 
         ticketRepository.deleteById(ticketId);
