@@ -216,7 +216,7 @@ export default function ResourcesPage() {
   const [compareList, setCompareList] = useState([])
   const [showCompare, setShowCompare] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
-  const [activeView, setActiveView] = useState('resources')
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const toggleCompare = (resource) => {
   setCompareList(prev => {
@@ -354,71 +354,46 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      {/* ── View toggle ─────────────────────────────── */}
-      <div className="flex gap-1 p-1 w-fit mb-5 bg-white border border-gray-200 rounded-2xl shadow-sm">
+      {/* ── Calendar toggle button ──────────────────── */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap gap-3 flex-1 items-center">
+          <input
+            className="input flex-1 min-w-[200px]"
+            placeholder="Search by name or location..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="MAINTENANCE">Maintenance</option>
+            <option value="UNAVAILABLE">Unavailable</option>
+          </select>
+        </div>
         <button
-          onClick={() => setActiveView('resources')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all
-            ${activeView === 'resources'
-              ? 'text-white shadow-md'
-              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'}`}
-          style={activeView === 'resources'
-            ? { background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }
-            : {}}
+          onClick={() => setCalendarOpen(p => !p)}
+          className={`ml-3 flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                      font-medium border transition-all shadow-sm
+            ${calendarOpen
+              ? 'text-white border-indigo-700'
+              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          style={calendarOpen ? { background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' } : {}}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          Resources
+          {calendarOpen ? 'Hide Calendar' : 'Booking Calendar'}
         </button>
-        <button
-          onClick={() => setActiveView('calendar')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all
-            ${activeView === 'calendar'
-              ? 'text-white shadow-md'
-              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'}`}
-          style={activeView === 'calendar'
-            ? { background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }
-            : {}}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Booking Calendar
-        </button>
-      </div>
-
-      {/* ── Calendar view ───────────────────────────── */}
-      {activeView === 'calendar' && <SmartCalendar />}
-
-      {/* ── Resources view ──────────────────────────── */}
-      {activeView === 'resources' && <>
-
-      {/* ── Filters ──────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 mb-4 items-center">
-        <input
-          className="input flex-1 min-w-[200px]"
-          placeholder="Search by name or location..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-        <select
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          <option value="ALL">All Statuses</option>
-          <option value="AVAILABLE">Available</option>
-          <option value="MAINTENANCE">Maintenance</option>
-          <option value="UNAVAILABLE">Unavailable</option>
-        </select>
       </div>
 
       {/* Type filter pills */}
-      <div className="flex flex-wrap gap-2 mb-5">
+      <div className="flex flex-wrap gap-2 mb-4">
         {TYPE_FILTERS.map(f => (
           <button
             key={f.key}
@@ -438,6 +413,10 @@ export default function ResourcesPage() {
       <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-4">
         Showing {filtered.length} of {resources.length} resources
       </p>
+
+      {/* ── Main layout: resources + optional calendar sidebar ── */}
+      <div className={calendarOpen ? 'grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5 items-start' : ''}>
+      <div>
 
       {/* Compare bar */}
 {compareList.length > 0 && (
@@ -537,7 +516,16 @@ export default function ResourcesPage() {
         </div>
       )}
 
-      </>}
+      </div>{/* end resources inner div */}
+
+      {/* ── Calendar sidebar ── */}
+      {calendarOpen && (
+        <div className="xl:sticky xl:top-4">
+          <SmartCalendar />
+        </div>
+      )}
+
+      </div>{/* end grid wrapper */}
     </div>
   )
 }
