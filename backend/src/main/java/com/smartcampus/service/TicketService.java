@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -159,6 +160,7 @@ public Ticket resolveTicket(String ticketId, String resolutionNote, User current
 
     ticket.setStatus(Ticket.Status.RESOLVED);
     ticket.setResolutionNote(resolutionNote.trim());
+    ticket.setResolvedAt(LocalDateTime.now());
 
     Ticket saved = ticketRepository.save(ticket);
 
@@ -198,6 +200,11 @@ public Ticket resolveTicket(String ticketId, String resolutionNote, User current
 
         ticket.setAssignedToId(technician.getId());
         ticket.setAssignedToName(technician.getName());
+
+        // Record first response time when a technician is first assigned
+        if (ticket.getFirstResponseAt() == null) {
+            ticket.setFirstResponseAt(LocalDateTime.now());
+        }
 
         // Auto move to IN_PROGRESS if still OPEN
         if (ticket.getStatus() == Ticket.Status.OPEN) {
@@ -239,6 +246,14 @@ public Ticket resolveTicket(String ticketId, String resolutionNote, User current
         );
 
         ticket.getComments().add(comment);
+
+        // Record first response time when a staff member first comments
+        boolean isStaff = currentUser.getRole() == User.Role.ADMIN
+                       || currentUser.getRole() == User.Role.TECHNICIAN;
+        if (isStaff && ticket.getFirstResponseAt() == null) {
+            ticket.setFirstResponseAt(LocalDateTime.now());
+        }
+
         Ticket saved = ticketRepository.save(ticket);
 
         // Notify reporter if commenter is someone else
