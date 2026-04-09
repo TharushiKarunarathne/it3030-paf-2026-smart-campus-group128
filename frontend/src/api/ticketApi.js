@@ -7,7 +7,9 @@ export const getTicketById = (id) =>
   api.get(`/tickets/${id}`)
 
 export const createTicket = (data) =>
-  api.post('/tickets', data)
+  data instanceof FormData
+    ? api.post('/tickets', data, { headers: { 'Content-Type': 'multipart/form-data' } })
+    : api.post('/tickets', data)
 
 export const updateTicketStatus = (id, status) =>
   api.patch(`/tickets/${id}/status`, { status })

@@ -173,6 +173,38 @@ function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, isInCompare
   )
 }
 
+function ConfirmDialog({ message, subMessage, confirmLabel = 'Delete', onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+         style={{ backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-6 pt-6 pb-2 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-base font-bold text-gray-900 mb-1">{message}</h3>
+          {subMessage && <p className="text-sm text-gray-500">{subMessage}</p>}
+        </div>
+        <div className="flex gap-3 p-5">
+          <button onClick={onCancel}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold
+                       text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+            Cancel
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold
+                       text-white bg-red-600 hover:bg-red-700 transition-colors">
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ResourcesPage() {
   const { isAdmin }  = useAuth()
   const [resources, setResources]       = useState([])
@@ -182,6 +214,7 @@ export default function ResourcesPage() {
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [compareList, setCompareList] = useState([])
   const [showCompare, setShowCompare] = useState(false)
+  const [pendingDeleteId, setPendingDeleteId] = useState(null)
 
   const toggleCompare = (resource) => {
   setCompareList(prev => {
@@ -235,8 +268,11 @@ export default function ResourcesPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this resource permanently?')) return
+  const handleDelete = (id) => setPendingDeleteId(id)
+
+  const confirmDelete = async () => {
+    const id = pendingDeleteId
+    setPendingDeleteId(null)
     try {
       await deleteResource(id)
       setResources(prev => prev.filter(r => r.id !== id))
@@ -268,6 +304,16 @@ export default function ResourcesPage() {
 
   return (
     <div>
+      {pendingDeleteId && (
+        <ConfirmDialog
+          message="Delete this resource permanently?"
+          subMessage="This action cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      )}
+
       {/* ── Hero header ─────────────────────────────── */}
       <div className="rounded-2xl overflow-hidden mb-6"
            style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}>
