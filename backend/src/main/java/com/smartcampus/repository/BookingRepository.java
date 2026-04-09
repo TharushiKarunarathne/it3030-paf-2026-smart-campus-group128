@@ -35,4 +35,10 @@ public interface BookingRepository extends MongoRepository<Booking, String> {
 
     // All bookings for a resource ordered by start time
     List<Booking> findByResourceIdOrderByStartTimeAsc(String resourceId);
+
+    // Analytics: bookings created in the last N days
+    List<Booking> findByCreatedAtAfter(LocalDateTime date);
+
+    // Analytics: count by status
+    long countByStatus(Booking.BookingStatus status);
 }

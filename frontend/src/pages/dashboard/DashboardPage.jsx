@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
+import { getDashboardAnalytics } from '../../api/analyticsApi'
 
 const ROLE_BADGE = {
   ADMIN:      'bg-purple-100 text-purple-700',
@@ -10,11 +12,11 @@ const ROLE_BADGE = {
 
 const TYPE_STYLES = {
   BOOKING_PENDING:   { bg: 'bg-orange-100',  text: 'text-orange-700',  icon: '⏳' },
-  BOOKING_APPROVED:  { bg: 'bg-green-100',  text: 'text-green-700',  icon: '✓' },
-  BOOKING_REJECTED:  { bg: 'bg-red-100',    text: 'text-red-700',    icon: '✕' },
-  BOOKING_CANCELLED: { bg: 'bg-gray-100',   text: 'text-gray-600',   icon: '⊘' },
-  TICKET_UPDATED:    { bg: 'bg-blue-100',   text: 'text-blue-700',   icon: '↑' },
-  NEW_COMMENT:       { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: '💬' },
+  BOOKING_APPROVED:  { bg: 'bg-green-100',   text: 'text-green-700',   icon: '✓' },
+  BOOKING_REJECTED:  { bg: 'bg-red-100',     text: 'text-red-700',     icon: '✕' },
+  BOOKING_CANCELLED: { bg: 'bg-gray-100',    text: 'text-gray-600',    icon: '⊘' },
+  TICKET_UPDATED:    { bg: 'bg-blue-100',    text: 'text-blue-700',    icon: '↑' },
+  NEW_COMMENT:       { bg: 'bg-yellow-100',  text: 'text-yellow-700',  icon: '💬' },
 }
 
 function timeAgo(dateStr) {
@@ -52,9 +54,135 @@ function StatCard({ label, value, to, color }) {
   )
 }
 
+// ── Analytics sub-components ────────────────────────────────────────────────
+
+function AnalyticsStatBox({ label, value, color }) {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-1">
+      <span className={`text-xs font-medium uppercase tracking-wide ${color}`}>{label}</span>
+      <span className="text-2xl font-bold text-gray-900">{value ?? '—'}</span>
+    </div>
+  )
+}
+
+function PeakHoursChart({ peakHours }) {
+  if (!peakHours || peakHours.length === 0) {
+    return (
+      <p className="text-sm text-gray-400 text-center py-4">No booking data yet</p>
+    )
+  }
+  const maxCount = Math.max(...peakHours.map(h => h.count), 1)
+  return (
+    <div className="flex items-end gap-1 h-20 w-full overflow-x-auto pb-1">
+      {peakHours.map(({ hour, count }) => (
+        <div key={hour} className="flex flex-col items-center gap-0.5 flex-1 min-w-[28px]">
+          <span className="text-[10px] text-gray-500 leading-none">{count}</span>
+          <div
+            className="w-full bg-purple-400 rounded-t hover:bg-purple-500 transition-colors"
+            style={{ height: `${Math.max((count / maxCount) * 52, 4)}px` }}
+            title={`${hour}:00 — ${count} booking${count !== 1 ? 's' : ''}`}
+          />
+          <span className="text-[10px] text-gray-500 leading-none">{hour}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AdminAnalytics({ analytics, loading }) {
+  if (loading) {
+    return (
+      <div className="card border-purple-100 mb-6 animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-40 mb-4" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-100 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+  if (!analytics) return null
+
+  return (
+    <div className="card border-purple-100 mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">📊</span>
+        <h2 className="text-base font-semibold text-gray-900">Analytics</h2>
+        <span className="text-xs text-gray-400 ml-1">— last 7 days</span>
+      </div>
+
+      {/* KPI grid */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <AnalyticsStatBox label="Total Users"     value={analytics.totalUsers}       color="text-purple-600" />
+        <AnalyticsStatBox label="New Bookings"    value={analytics.totalBookings}    color="text-green-600" />
+        <AnalyticsStatBox label="Approved"        value={analytics.approvedBookings} color="text-emerald-600" />
+        <AnalyticsStatBox label="Open Tickets"    value={analytics.openTickets}      color="text-orange-600" />
+        <AnalyticsStatBox label="Resolved Tickets" value={analytics.resolvedTickets} color="text-blue-600" />
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-5">
+        {/* Top resources */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">
+            Top booked resources
+          </h3>
+          {analytics.topResources?.length === 0 ? (
+            <p className="text-sm text-gray-400">No bookings in the last 7 days</p>
+          ) : (
+            <div className="space-y-2">
+              {analytics.topResources?.map((r, i) => (
+                <div key={r.resourceId}
+                  className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center
+                                      text-xs font-bold
+                                      ${i === 0 ? 'bg-yellow-100 text-yellow-700'
+                                                : i === 1 ? 'bg-gray-200 text-gray-600'
+                                                          : 'bg-orange-100 text-orange-600'}`}>
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-gray-800 font-medium">{r.resourceName}</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-700">
+                    {r.count} booking{r.count !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Peak hours chart */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">
+            Peak booking hours
+          </h3>
+          <PeakHoursChart peakHours={analytics.peakHours} />
+          <p className="text-[10px] text-gray-400 mt-1 text-center">hour of day (24h)</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { user, isAdmin, isTechnician } = useAuth()
-  const { notifications, unreadCount } = useNotifications()
+  const { notifications, unreadCount }  = useNotifications()
+
+  const [analytics, setAnalytics]       = useState(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isAdmin) return
+    setAnalyticsLoading(true)
+    getDashboardAnalytics()
+      .then(setAnalytics)
+      .catch(() => {})
+      .finally(() => setAnalyticsLoading(false))
+  }, [isAdmin])
 
   return (
     <div>
@@ -111,6 +239,11 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+      )}
+
+      {/* Admin analytics */}
+      {isAdmin && (
+        <AdminAnalytics analytics={analytics} loading={analyticsLoading} />
       )}
 
       {/* Technician banner */}
@@ -172,7 +305,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Quick actions + activity */}
+      {/* Quick actions + activity feed */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -199,6 +332,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Recent activity feed */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-gray-900">
@@ -211,9 +345,10 @@ export default function DashboardPage() {
           </div>
 
           {notifications.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">
-              No activity yet
-            </p>
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <span className="text-2xl">🔔</span>
+              <p className="text-sm text-gray-400">No recent activity</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {notifications.slice(0, 5).map((n) => {

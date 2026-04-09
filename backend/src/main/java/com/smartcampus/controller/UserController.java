@@ -126,6 +126,20 @@ public class UserController {
         }
     }
 
+    // PUT /api/users/me/preferences — save notification preferences
+    @PutMapping("/me/preferences")
+    public ResponseEntity<?> updatePreferences(
+            @AuthenticationPrincipal User user,
+            @RequestBody User.NotificationPreferences preferences) {
+        try {
+            User updated = userService.updatePreferences(user.getId(), preferences);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // POST /api/users/me/photo — upload profile photo
     @PostMapping("/me/photo")
     public ResponseEntity<?> uploadProfilePhoto(

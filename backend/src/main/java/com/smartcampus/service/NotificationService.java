@@ -1,7 +1,9 @@
 package com.smartcampus.service;
 
 import com.smartcampus.model.Notification;
+import com.smartcampus.model.User;
 import com.smartcampus.repository.NotificationRepository;
+import com.smartcampus.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +13,12 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final UserRepository         userRepository;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository,
+                               UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
+        this.userRepository         = userRepository;
     }
 
     // Get all notifications for a user
@@ -51,10 +56,20 @@ public class NotificationService {
     }
 
     // Create a notification (called internally by other services)
+    // Respects the target user's notification preferences — returns null if suppressed.
     public Notification createNotification(String userId,
                                            String message,
                                            Notification.NotificationType type,
                                            String entityId) {
+        // Check user preferences before saving
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            User.NotificationPreferences prefs = user.getNotificationPreferences();
+            if (prefs != null && !isAllowed(prefs, type)) {
+                return null;  // suppressed by user preference
+            }
+        }
+
         Notification notification = Notification.builder()
                 .userId(userId)
                 .message(message)
@@ -63,5 +78,15 @@ public class NotificationService {
                 .read(false)
                 .build();
         return notificationRepository.save(notification);
+    }
+
+    private boolean isAllowed(User.NotificationPreferences prefs,
+                               Notification.NotificationType type) {
+        return switch (type) {
+            case BOOKING_APPROVED, BOOKING_REJECTED,
+                 BOOKING_PENDING, BOOKING_CANCELLED -> prefs.isBookingUpdates();
+            case TICKET_UPDATED                     -> prefs.isTicketUpdates();
+            case NEW_COMMENT                        -> prefs.isCommentUpdates();
+        };
     }
 }

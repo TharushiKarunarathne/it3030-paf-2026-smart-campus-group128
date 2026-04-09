@@ -28,4 +28,10 @@ public interface TicketRepository extends MongoRepository<Ticket, String> {
     // Filter by assigned technician + status
     List<Ticket> findByAssignedToIdAndStatusOrderByCreatedAtDesc(
             String assignedToId, Ticket.Status status);
+
+    // Analytics: count by status
+    long countByStatus(Ticket.Status status);
+
+    // Analytics: tickets created in the last N days
+    List<Ticket> findByCreatedAtAfter(java.time.LocalDateTime date);
 }

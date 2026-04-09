@@ -8,7 +8,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import LoginPage          from './pages/auth/LoginPage'
 import DashboardPage      from './pages/dashboard/DashboardPage'
 import NotificationsPage  from './pages/notifications/NotificationsPage'
-import UserManagement     from './pages/admin/UserManagement'
+import UserManagement     from './pages/admin/UserManagement.jsx'
 import ProfilePage from './pages/profile/ProfilePage'
 
 import TicketsPage      from './pages/tickets/TicketsPage'
@@ -87,7 +87,6 @@ export default function App() {
                 <Route path="/bookings/new"       element={<NewBookingPage />} />
                 <Route path="/bookings/:id"       element={<BookingDetailPage />} />
 
-                {/* Member 3 — Incident Ticketing */}
                 {/* Member 3 — Incident Ticketing */}
                 <Route path="/tickets"     element={<TicketsPage />} />
                 <Route path="/tickets/new" element={<NewTicketPage />} />

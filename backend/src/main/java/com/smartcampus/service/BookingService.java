@@ -140,6 +140,7 @@ public class BookingService {
         if (newStatus == Booking.BookingStatus.PENDING) {
             booking.setStatus(Booking.BookingStatus.PENDING);
             booking.setAdminNote(null);
+            booking.setCheckedInAt(null);
             Booking saved = bookingRepository.save(booking);
             notificationService.createNotification(
                 booking.getUserId(),
@@ -148,8 +149,6 @@ public class BookingService {
                 booking.getId()
             );
             return saved;
-            booking.setCheckedInAt(null);
-            return bookingRepository.save(booking);
         }
 
         // Normal flow — booking must be PENDING

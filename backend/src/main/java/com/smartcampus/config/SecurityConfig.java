@@ -44,6 +44,7 @@ public class SecurityConfig {
                 // Resources — read is public, write is admin only (handled by @PreAuthorize)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/resources/**").permitAll()
                 
+                .requestMatchers("/api/analytics/**").hasRole("ADMIN")
                 .requestMatchers("/api/users").hasRole("ADMIN")
                 .requestMatchers("/api/users/*/role").hasRole("ADMIN")
 

@@ -24,6 +24,8 @@ public class User {
     private Role role = Role.USER;
     private boolean enabled = true;
 
+    private NotificationPreferences notificationPreferences = new NotificationPreferences();
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -31,6 +33,22 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role { USER, TECHNICIAN, ADMIN }
+
+    // ── Notification Preferences ──────────────────────────────────────────────
+    public static class NotificationPreferences {
+        private boolean bookingUpdates = true;
+        private boolean ticketUpdates  = true;
+        private boolean commentUpdates = true;
+
+        public NotificationPreferences() {}
+
+        public boolean isBookingUpdates()                       { return bookingUpdates; }
+        public boolean isTicketUpdates()                        { return ticketUpdates; }
+        public boolean isCommentUpdates()                       { return commentUpdates; }
+        public void setBookingUpdates(boolean bookingUpdates)   { this.bookingUpdates = bookingUpdates; }
+        public void setTicketUpdates(boolean ticketUpdates)     { this.ticketUpdates = ticketUpdates; }
+        public void setCommentUpdates(boolean commentUpdates)   { this.commentUpdates = commentUpdates; }
+    }
 
     public User() {}
 
@@ -43,6 +61,7 @@ public class User {
     public String getGoogleId()      { return googleId; }
     public Role   getRole()          { return role; }
     public boolean isEnabled()       { return enabled; }
+    public NotificationPreferences getNotificationPreferences() { return notificationPreferences; }
     public LocalDateTime getCreatedAt()  { return createdAt; }
     public LocalDateTime getUpdatedAt()  { return updatedAt; }
 
@@ -55,6 +74,9 @@ public class User {
     public void setGoogleId(String googleId) { this.googleId = googleId; }
     public void setRole(Role role)           { this.role = role; }
     public void setEnabled(boolean enabled)  { this.enabled = enabled; }
+    public void setNotificationPreferences(NotificationPreferences notificationPreferences) {
+        this.notificationPreferences = notificationPreferences;
+    }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
