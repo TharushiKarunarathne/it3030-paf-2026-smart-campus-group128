@@ -38,6 +38,10 @@ public class Ticket {
     // Embedded comments
     private List<Comment> comments = new ArrayList<>();
 
+    // SLA timers
+    private LocalDateTime firstResponseAt;
+    private LocalDateTime resolvedAt;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -66,8 +70,24 @@ public class Ticket {
     public String getResolutionNote()              { return resolutionNote; }
     public void setResolutionNote(String resolutionNote) { this.resolutionNote = resolutionNote; }
     public List<Comment> getComments()  { return comments; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public LocalDateTime getFirstResponseAt()            { return firstResponseAt; }
+    public void setFirstResponseAt(LocalDateTime v)      { this.firstResponseAt = v; }
+    public LocalDateTime getResolvedAt()                 { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime v)           { this.resolvedAt = v; }
+    public LocalDateTime getCreatedAt()                  { return createdAt; }
+    public LocalDateTime getUpdatedAt()                  { return updatedAt; }
+
+    /** Minutes from creation to first staff response, or null if not yet responded. */
+    public Long getTimeToFirstResponseMinutes() {
+        if (createdAt == null || firstResponseAt == null) return null;
+        return java.time.Duration.between(createdAt, firstResponseAt).toMinutes();
+    }
+
+    /** Minutes from creation to resolution, or null if not yet resolved. */
+    public Long getTimeToResolutionMinutes() {
+        if (createdAt == null || resolvedAt == null) return null;
+        return java.time.Duration.between(createdAt, resolvedAt).toMinutes();
+    }
 
     // Setters
     public void setId(String id)                         { this.id = id; }
@@ -83,8 +103,8 @@ public class Ticket {
     public void setAssignedToName(String assignedToName) { this.assignedToName = assignedToName; }
     public void setImageUrl(String imageUrl)             { this.imageUrl = imageUrl; }
     public void setComments(List<Comment> comments)      { this.comments = comments; }
-    public void setCreatedAt(LocalDateTime createdAt)    { this.createdAt = createdAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt)    { this.updatedAt = updatedAt; }
+    public void setCreatedAt(LocalDateTime v)             { this.createdAt = v; }
+    public void setUpdatedAt(LocalDateTime v)             { this.updatedAt = v; }
 
     // Helper
     public int getCommentCount() { return comments == null ? 0 : comments.size(); }

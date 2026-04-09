@@ -34,3 +34,6 @@ export const updateUserRole = (userId, role) =>
 
 export const deleteUser = (userId) =>
   api.delete(`/users/${userId}`)
+
+export const updateNotificationPreferences = (prefs) =>
+  api.put('/users/me/preferences', prefs).then(r => r.data)

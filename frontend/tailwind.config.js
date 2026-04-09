@@ -8,11 +8,16 @@ export default {
     extend: {
       colors: {
         primary: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
+          50:  '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#1e3a5f',   // main brand navy
+          700: '#1a3354',   // darker navy
+          800: '#152b47',
+          900: '#0f1f35',
         },
       },
     },

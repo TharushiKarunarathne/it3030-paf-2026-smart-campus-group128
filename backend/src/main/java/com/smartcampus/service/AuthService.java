@@ -122,12 +122,23 @@ public Map<String, Object> loginWithGoogle(String credential) throws Exception {
                 user.getRole().name()
         );
 
+        // Resolve preferences — fall back to safe defaults if null (existing users)
+        User.NotificationPreferences prefs = user.getNotificationPreferences();
+        if (prefs == null) {
+            prefs = new User.NotificationPreferences();
+        }
+        Map<String, Object> prefsMap = new HashMap<>();
+        prefsMap.put("bookingUpdates", prefs.isBookingUpdates());
+        prefsMap.put("ticketUpdates",  prefs.isTicketUpdates());
+        prefsMap.put("commentUpdates", prefs.isCommentUpdates());
+
         Map<String, Object> userMap = new HashMap<>();
-        userMap.put("id",      user.getId());
-        userMap.put("name",    user.getName());
-        userMap.put("email",   user.getEmail());
-        userMap.put("role",    user.getRole().name());
-        userMap.put("picture", user.getPicture());
+        userMap.put("id",                      user.getId());
+        userMap.put("name",                    user.getName());
+        userMap.put("email",                   user.getEmail());
+        userMap.put("role",                    user.getRole().name());
+        userMap.put("picture",                 user.getPicture());
+        userMap.put("notificationPreferences", prefsMap);
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);

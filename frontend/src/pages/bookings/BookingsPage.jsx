@@ -10,9 +10,10 @@ import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
 const STATUS_CONFIG = {
-  PENDING:  { label: 'Pending',  dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  APPROVED: { label: 'Approved', dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-200' },
-  REJECTED: { label: 'Rejected', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
+  PENDING:    { label: 'Pending',    dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  APPROVED:   { label: 'Approved',   dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700 border-green-200' },
+  REJECTED:   { label: 'Rejected',   dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200' },
+  CHECKED_IN: { label: 'Checked In', dot: 'bg-blue-500',   badge: 'bg-blue-50 text-blue-700 border-blue-200' },
 }
 
 const TYPE_ICON = {
@@ -33,37 +34,50 @@ const TYPE_BG = {
   LIBRARY_STUDY_ROOM: 'bg-teal-50',
 }
 
-const TABS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED']
+const TABS = ['ALL', 'PENDING', 'APPROVED', 'CHECKED_IN', 'REJECTED']
 
 function formatDate(dt) {
-  return new Date(dt).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
+  if (!dt) return ''
+  const [datePart] = dt.split('T')
+  const [y, m, d] = datePart.split('-')
+  const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                  'Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${d} ${months[parseInt(m) - 1]} ${y}`
 }
 
 function formatTime(dt) {
-  return new Date(dt).toLocaleTimeString('en-GB', {
-    hour: '2-digit', minute: '2-digit',
-  })
+  if (!dt) return ''
+  const [, timePart] = dt.split('T')
+  const [h, m] = timePart.split(':')
+  const hour = parseInt(h)
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayH = hour % 12 === 0 ? 12 : hour % 12
+  return `${String(displayH).padStart(2, '0')}:${m} ${ampm}`
 }
 
 function calcDuration(start, end) {
-  const mins = (new Date(end) - new Date(start)) / 60000
+  if (!start || !end) return ''
+  const [, st] = start.split('T')
+  const [, et] = end.split('T')
+  const [sh, sm] = st.split(':').map(Number)
+  const [eh, em] = et.split(':').map(Number)
+  const mins = (eh * 60 + em) - (sh * 60 + sm)
   if (mins < 60) return `${mins}m`
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
+  const h = Math.floor(mins / 60), m = mins % 60
   return m ? `${h}h ${m}m` : `${h}h`
 }
 
-// ── Reusable Modal ─────────────────────────────────────
 function Modal({ open, onClose, children }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center
-                    justify-center z-50 p-4"
-         onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl"
-           onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-md shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>
@@ -72,24 +86,28 @@ function Modal({ open, onClose, children }) {
 
 export default function BookingsPage() {
   const { isAdmin } = useAuth()
-  const [bookings, setBookings]     = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [tab, setTab]               = useState('ALL')
-  const [search, setSearch]         = useState('')
-  const [actioning, setActioning]   = useState(false)
+  const [bookings, setBookings]   = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [tab, setTab]             = useState('ALL')
+  const [search, setSearch]       = useState('')
+  const [actioning, setActioning] = useState(false)
 
-  // Approve modal state
-  const [approveModal, setApproveModal]   = useState(false)
+  // Approve modal
+  const [approveModal, setApproveModal]     = useState(false)
   const [approveBooking, setApproveBooking] = useState(null)
 
-  // Revert modal state
-  const [revertModal, setRevertModal]   = useState(false)
+  // Reject modal
+  const [rejectModal, setRejectModal]     = useState(false)
+  const [rejectBooking, setRejectBooking] = useState(null)
+  const [rejectNote, setRejectNote]       = useState('')
+
+  // Revert modal
+  const [revertModal, setRevertModal]     = useState(false)
   const [revertBooking, setRevertBooking] = useState(null)
 
-  // Reject modal state
-  const [rejectModal, setRejectModal] = useState(false)
-  const [rejectBooking, setRejectBooking] = useState(null)
-  const [rejectNote, setRejectNote]   = useState('')
+  // Delete modal — REJECTED and CHECKED_IN bookings
+  const [deleteModal, setDeleteModal]   = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => { fetchBookings() }, [])
 
@@ -124,6 +142,11 @@ export default function BookingsPage() {
   const openRevert = (booking) => {
     setRevertBooking(booking)
     setRevertModal(true)
+  }
+
+  const openDelete = (booking) => {
+    setDeleteTarget(booking)
+    setDeleteModal(true)
   }
 
   // ── Actions ────────────────────────────────────────
@@ -178,6 +201,21 @@ export default function BookingsPage() {
     }
   }
 
+  const handleDeleteConfirm = async () => {
+    try {
+      setActioning(true)
+      await deleteBooking(deleteTarget.id)
+      setBookings(prev => prev.filter(b => b.id !== deleteTarget.id))
+      toast.success('Booking permanently deleted.')
+      setDeleteModal(false)
+      setDeleteTarget(null)
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete.')
+    } finally {
+      setActioning(false)
+    }
+  }
+
   const handleCancel = async (id) => {
     try {
       await deleteBooking(id)
@@ -189,9 +227,10 @@ export default function BookingsPage() {
   }
 
   const counts = {
-    PENDING:  bookings.filter(b => b.status === 'PENDING').length,
-    APPROVED: bookings.filter(b => b.status === 'APPROVED').length,
-    REJECTED: bookings.filter(b => b.status === 'REJECTED').length,
+    PENDING:    bookings.filter(b => b.status === 'PENDING').length,
+    APPROVED:   bookings.filter(b => b.status === 'APPROVED').length,
+    REJECTED:   bookings.filter(b => b.status === 'REJECTED').length,
+    CHECKED_IN: bookings.filter(b => b.status === 'CHECKED_IN').length,
   }
 
   const filtered = bookings
@@ -233,12 +272,13 @@ export default function BookingsPage() {
               + New Booking
             </Link>
           </div>
-          <div className="flex gap-8">
+          <div className="flex gap-6 flex-wrap">
             {[
-              { label: 'Pending',  count: counts.PENDING,  color: 'text-amber-300' },
-              { label: 'Approved', count: counts.APPROVED, color: 'text-green-300' },
-              { label: 'Rejected', count: counts.REJECTED, color: 'text-red-300' },
-              { label: 'Total',    count: bookings.length, color: 'text-white' },
+              { label: 'Pending',    count: counts.PENDING,    color: 'text-amber-300' },
+              { label: 'Approved',   count: counts.APPROVED,   color: 'text-green-300' },
+              { label: 'Checked In', count: counts.CHECKED_IN, color: 'text-blue-300' },
+              { label: 'Rejected',   count: counts.REJECTED,   color: 'text-red-300' },
+              { label: 'Total',      count: bookings.length,   color: 'text-white' },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
@@ -262,7 +302,7 @@ export default function BookingsPage() {
       )}
 
       {/* ── Tabs ──────────────────────────────────────── */}
-      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {TABS.map(t => (
           <button
             key={t}
@@ -276,9 +316,10 @@ export default function BookingsPage() {
             {t === 'ALL' ? 'All' : STATUS_CONFIG[t].label}
             {t !== 'ALL' && counts[t] > 0 && (
               <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs
-                ${t === 'PENDING'  ? 'bg-amber-100 text-amber-700'  : ''}
-                ${t === 'APPROVED' ? 'bg-green-100 text-green-700'  : ''}
-                ${t === 'REJECTED' ? 'bg-red-100   text-red-700'    : ''}
+                ${t === 'PENDING'    ? 'bg-amber-100 text-amber-700'  : ''}
+                ${t === 'APPROVED'   ? 'bg-green-100 text-green-700'  : ''}
+                ${t === 'REJECTED'   ? 'bg-red-100   text-red-700'    : ''}
+                ${t === 'CHECKED_IN' ? 'bg-blue-100  text-blue-700'   : ''}
               `}>
                 {counts[t]}
               </span>
@@ -296,7 +337,8 @@ export default function BookingsPage() {
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i}
-              className="bg-white rounded-2xl border border-gray-100 p-4 h-24 animate-pulse">
+              className="bg-white rounded-2xl border border-gray-100
+                         p-4 h-24 animate-pulse">
               <div className="h-3 bg-gray-100 rounded w-1/3 mb-3" />
               <div className="h-3 bg-gray-100 rounded w-2/3" />
             </div>
@@ -333,8 +375,9 @@ export default function BookingsPage() {
                            hover:shadow-md transition-all duration-200">
 
                 <div className={`h-0.5 rounded-t-2xl ${
-                  booking.status === 'APPROVED' ? 'bg-green-400' :
-                  booking.status === 'REJECTED' ? 'bg-red-400'   : 'bg-amber-400'
+                  booking.status === 'APPROVED'   ? 'bg-green-400' :
+                  booking.status === 'REJECTED'   ? 'bg-red-400'   :
+                  booking.status === 'CHECKED_IN' ? 'bg-blue-400'  : 'bg-amber-400'
                 }`} />
 
                 <div className="p-4">
@@ -381,10 +424,17 @@ export default function BookingsPage() {
                           Reason: {booking.adminNote}
                         </p>
                       )}
+
+                      {booking.status === 'CHECKED_IN' && (
+                        <p className="text-xs text-blue-500 mt-0.5 font-medium">
+                          ✅ Checked in successfully
+                        </p>
+                      )}
                     </div>
 
-                    {/* Actions */}
+                    {/* ── Actions ───────────────────── */}
                     <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+
                       <Link
                         to={`/bookings/${booking.id}`}
                         className="text-xs px-3 py-1.5 rounded-lg bg-gray-50
@@ -417,8 +467,12 @@ export default function BookingsPage() {
                         </>
                       )}
 
-                      {/* Admin APPROVED or REJECTED — revert */}
-                      {isAdmin && booking.status !== 'PENDING' && (
+                      {/* Admin APPROVED or REJECTED only — revert
+                          CHECKED_IN cannot be reverted */}
+                      {isAdmin && (
+                        booking.status === 'APPROVED' ||
+                        booking.status === 'REJECTED'
+                      ) && (
                         <button
                           onClick={() => openRevert(booking)}
                           disabled={actioning}
@@ -430,7 +484,23 @@ export default function BookingsPage() {
                         </button>
                       )}
 
-                      {/* User — cancel own PENDING booking */}
+                      {/* Admin — delete REJECTED or CHECKED_IN bookings */}
+                      {isAdmin && (
+                        booking.status === 'REJECTED' ||
+                        booking.status === 'CHECKED_IN'
+                      ) && (
+                        <button
+                          onClick={() => openDelete(booking)}
+                          disabled={actioning}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-red-50
+                                     text-red-600 border border-red-200
+                                     hover:bg-red-100 transition-colors font-medium
+                                     disabled:opacity-50">
+                          🗑 Delete
+                        </button>
+                      )}
+
+                      {/* User — cancel own PENDING booking only */}
                       {!isAdmin && booking.status === 'PENDING' && (
                         <button
                           onClick={() => handleCancel(booking.id)}
@@ -455,7 +525,7 @@ export default function BookingsPage() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center
-                              justify-center text-green-600 text-xl">
+                              justify-center text-green-600 text-xl flex-shrink-0">
                 ✓
               </div>
               <div>
@@ -466,7 +536,6 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* Summary */}
             <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2.5">
               {[
                 { label: 'Resource',     value: approveBooking.resourceName },
@@ -511,7 +580,7 @@ export default function BookingsPage() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center
-                              justify-center text-red-600 text-xl">
+                              justify-center text-red-600 text-xl flex-shrink-0">
                 ✗
               </div>
               <div>
@@ -549,7 +618,11 @@ export default function BookingsPage() {
                 {actioning ? 'Rejecting...' : '✗ Confirm rejection'}
               </button>
               <button
-                onClick={() => { setRejectModal(false); setRejectBooking(null); setRejectNote('') }}
+                onClick={() => {
+                  setRejectModal(false)
+                  setRejectBooking(null)
+                  setRejectNote('')
+                }}
                 className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
                            text-gray-600 hover:bg-gray-200 transition-colors">
                 Cancel
@@ -565,7 +638,7 @@ export default function BookingsPage() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center
-                              justify-center text-orange-600 text-xl">
+                              justify-center text-orange-600 text-xl flex-shrink-0">
                 ↩
               </div>
               <div>
@@ -585,7 +658,8 @@ export default function BookingsPage() {
                 </span>
                 {' '}will be moved back to{' '}
                 <span className="font-semibold">Pending</span>.
-                The admin note will be cleared and the booking will need to be reviewed again.
+                {' '}The admin note will be cleared and the booking
+                will need to be reviewed again.
               </p>
             </div>
 
@@ -600,6 +674,88 @@ export default function BookingsPage() {
               </button>
               <button
                 onClick={() => { setRevertModal(false); setRevertBooking(null) }}
+                className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
+                           text-gray-600 hover:bg-gray-200 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── Delete Modal — REJECTED and CHECKED_IN ────── */}
+      <Modal open={deleteModal} onClose={() => setDeleteModal(false)}>
+        {deleteTarget && (
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center
+                              justify-center text-red-600 text-xl flex-shrink-0">
+                🗑
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Delete Booking</h3>
+                <p className="text-xs text-gray-400">
+                  This action is permanent and cannot be undone
+                </p>
+              </div>
+            </div>
+
+            {/* Extra strong warning for CHECKED_IN */}
+            {deleteTarget.status === 'CHECKED_IN' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl
+                              p-4 mb-4">
+                <p className="text-sm text-blue-800 font-semibold mb-1">
+                  ℹ️ This booking was checked in
+                </p>
+                <p className="text-sm text-blue-700 leading-relaxed">
+                  Deleting this record will remove all evidence that this
+                  resource was used. This will affect usage history and
+                  analytics. Only delete if absolutely necessary.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
+              <p className="text-sm text-red-800 font-semibold mb-1">
+                ⚠️ Permanent deletion
+              </p>
+              <p className="text-sm text-red-700 leading-relaxed">
+                You are about to permanently delete the booking for{' '}
+                <span className="font-semibold">{deleteTarget.resourceName}</span>
+                {' '}by{' '}
+                <span className="font-semibold">
+                  {deleteTarget.userName ?? deleteTarget.userEmail}
+                </span>.
+                {' '}This record will be gone forever and cannot be recovered.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-2">
+              {[
+                { label: 'Resource', value: deleteTarget.resourceName },
+                { label: 'User',     value: deleteTarget.userName ?? deleteTarget.userEmail },
+                { label: 'Date',     value: formatDate(deleteTarget.startTime) },
+                { label: 'Time',     value: `${formatTime(deleteTarget.startTime)} – ${formatTime(deleteTarget.endTime)}` },
+                { label: 'Status',   value: deleteTarget.status },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between text-sm">
+                  <span className="text-gray-500">{row.label}</span>
+                  <span className="font-medium text-gray-900">{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={actioning}
+                className="flex-1 py-2.5 text-sm font-medium rounded-xl
+                           bg-red-600 text-white hover:bg-red-700
+                           transition-colors disabled:opacity-50">
+                {actioning ? 'Deleting...' : '🗑 Yes, delete permanently'}
+              </button>
+              <button
+                onClick={() => { setDeleteModal(false); setDeleteTarget(null) }}
                 className="px-4 py-2.5 text-sm rounded-xl bg-gray-100
                            text-gray-600 hover:bg-gray-200 transition-colors">
                 Cancel

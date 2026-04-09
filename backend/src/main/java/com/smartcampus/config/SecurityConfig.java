@@ -44,8 +44,33 @@ public class SecurityConfig {
                 // Resources — read is public, write is admin only (handled by @PreAuthorize)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/resources/**").permitAll()
                 
+                .requestMatchers("/api/analytics/**").hasRole("ADMIN")
                 .requestMatchers("/api/users").hasRole("ADMIN")
                 .requestMatchers("/api/users/*/role").hasRole("ADMIN")
+
+                // Resources — GET is public, everything else authenticated
+                .requestMatchers(HttpMethod.GET,    "/api/resources/**").permitAll()
+                .requestMatchers(HttpMethod.POST,   "/api/resources/**").authenticated()
+                .requestMatchers(HttpMethod.PUT,    "/api/resources/**").authenticated()
+                .requestMatchers(HttpMethod.PATCH,  "/api/resources/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/resources/**").authenticated()
+                
+                // QR verification — public, no login needed
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                    "/api/bookings/verify/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH,
+                    "/api/bookings/*/checkin").permitAll()
+
+                // Bookings — all methods explicitly allowed for authenticated users
+                // role checks are handled manually inside BookingController
+                .requestMatchers(HttpMethod.GET,    "/api/bookings/**").authenticated()
+                .requestMatchers(HttpMethod.POST,   "/api/bookings/**").authenticated()
+                .requestMatchers(HttpMethod.PATCH,  "/api/bookings/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").authenticated()
+
+                // Users
+                .requestMatchers("/api/users/**").authenticated()
+
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter,

@@ -95,6 +95,16 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    // Update notification preferences
+    public User updatePreferences(String userId, User.NotificationPreferences preferences) {
+        User user = getUserById(userId);
+        if (preferences == null) {
+            preferences = new User.NotificationPreferences();
+        }
+        user.setNotificationPreferences(preferences);
+        return userRepository.save(user);
+    }
+
     // Delete user
     public void deleteUser(String userId) {
         User user = getUserById(userId);
