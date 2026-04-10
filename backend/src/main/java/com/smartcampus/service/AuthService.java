@@ -66,7 +66,9 @@ public Map<String, Object> loginWithGoogle(String credential) throws Exception {
                     .build();
         } else {
             user.setName(name);
-            user.setPicture(picture);
+            if (user.getPicture() == null || !user.getPicture().startsWith("/uploads/")) {
+                    user.setPicture(picture);
+            }
             user.setGoogleId(googleId);
         }
 
