@@ -55,7 +55,7 @@ public class NotificationService {
         notificationRepository.deleteByUserIdAndReadTrue(userId);
     }
 
-    // Create a notification (called internally by other services)
+    // Create a notification 
     // Respects the target user's notification preferences — returns null if suppressed.
     public Notification createNotification(String userId,
                                            String message,

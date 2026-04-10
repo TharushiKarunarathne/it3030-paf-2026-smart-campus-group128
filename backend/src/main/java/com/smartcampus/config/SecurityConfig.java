@@ -20,7 +20,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-// ── REMOVED @EnableMethodSecurity — was interfering with manual role checks ──
+
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -84,7 +84,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
 
-        // ── PATCH and PUT added — was missing, caused 403 on approve/reject ──
+        
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

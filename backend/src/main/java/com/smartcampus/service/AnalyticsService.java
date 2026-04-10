@@ -29,7 +29,7 @@ public class AnalyticsService {
     public Map<String, Object> getDashboardAnalytics() {
         LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
 
-        // ── Bookings (last 7 days) ─────────────────────────────────────────────
+        // ── Bookings (last 7 days) 
         List<Booking> recentBookings = bookingRepository.findByCreatedAtAfter(sevenDaysAgo);
         long totalBookings    = recentBookings.size();
         long approvedBookings = recentBookings.stream()
@@ -37,15 +37,15 @@ public class AnalyticsService {
                           || b.getStatus() == Booking.BookingStatus.CHECKED_IN)
                 .count();
 
-        // ── Tickets (current snapshot) ─────────────────────────────────────────
+        // ── Tickets (current snapshot) 
         long openTickets     = ticketRepository.countByStatus(Ticket.Status.OPEN)
                              + ticketRepository.countByStatus(Ticket.Status.IN_PROGRESS);
         long resolvedTickets = ticketRepository.countByStatus(Ticket.Status.RESOLVED);
 
-        // ── Total users ────────────────────────────────────────────────────────
+        // ── Total users 
         long totalUsers = userRepository.count();
 
-        // ── Top 3 most booked resources (last 7 days) ─────────────────────────
+        // ── Top 3 most booked resources (last 7 days) 
         Map<String, Long> resourceCounts = recentBookings.stream()
                 .collect(Collectors.groupingBy(Booking::getResourceId, Collectors.counting()));
 
@@ -67,7 +67,7 @@ public class AnalyticsService {
                 })
                 .collect(Collectors.toList());
 
-        // ── Peak booking hours (last 7 days, by startTime hour) ───────────────
+        // ── Peak booking hours (last 7 days, by startTime hour) 
         Map<Integer, Long> hourCounts = recentBookings.stream()
                 .filter(b -> b.getStartTime() != null)
                 .collect(Collectors.groupingBy(
@@ -84,7 +84,7 @@ public class AnalyticsService {
                 })
                 .collect(Collectors.toList());
 
-        // ── Assemble result ────────────────────────────────────────────────────
+        // ── Assemble result 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalUsers",       totalUsers);
         result.put("totalBookings",    totalBookings);
