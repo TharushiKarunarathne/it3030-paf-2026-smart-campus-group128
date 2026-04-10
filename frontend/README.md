@@ -1,16 +1,72 @@
-# React + Vite
+# Frontend – Smart Campus Operations Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React frontend for the **Smart Campus Operations Hub** project.
 
-Currently, two official plugins are available:
+## Technologies Used
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React
+- Vite
+- Tailwind CSS
+- React Router DOM
+- Axios
+- Google OAuth
+- QR Code React
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Google login
+- Role-based protected routes
+- Resource browsing and filtering
+- Booking request creation
+- Ticket creation and tracking
+- Notifications panel
+- Admin dashboard
+- Profile management
+- QR code booking verification
 
-## Expanding the ESLint configuration
+## Available Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Start development server
+
+```bash
+npm run dev
+```
+
+### Build project
+
+```bash
+npm run build
+```
+
+### Preview production build
+
+```bash
+npm run preview
+```
+
+## Development Server
+
+Runs by default on:  
+`http://localhost:5173`
+
+## Folder Structure
+
+```text
+frontend/
+├── public/
+├── src/
+├── package.json
+└── README.md
+```
+
+## Notes
+
+- This frontend communicates with the Spring Boot backend REST API.
+- Route protection is implemented based on authenticated user roles.
+- The UI is designed to support the workflow of resources, bookings, tickets, and notifications.
