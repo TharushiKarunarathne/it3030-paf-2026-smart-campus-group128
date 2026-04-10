@@ -110,6 +110,15 @@ public class BookingService {
         booking.setPurpose(purpose);
         booking.setStatus(Booking.BookingStatus.PENDING);
 
+        // Optional: expected attendees
+        Object attendeesRaw = body.get("expectedAttendees");
+        if (attendeesRaw != null) {
+            try {
+                int attendees = Integer.parseInt(attendeesRaw.toString());
+                if (attendees > 0) booking.setExpectedAttendees(attendees);
+            } catch (NumberFormatException ignored) {}
+        }
+
         Booking saved = bookingRepository.save(booking);
 
         // Notify all admins about the new booking request

@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -55,8 +56,8 @@ public class TicketController {
                     body.get("description"),
                     body.get("category"),
                     body.get("priority"),
-                    body.get("location"),
-                    null,
+                    body.getOrDefault("location", ""),
+                    new ArrayList<>(),
                     currentUser
             );
             return ResponseEntity.status(201).body(ticket);
@@ -66,19 +67,22 @@ public class TicketController {
         }
     }
 
-    // POST /api/tickets (with image upload)
+    // POST /api/tickets (with image upload — up to 3 images)
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<?> createTicketWithImage(
             @RequestParam("title")       String title,
             @RequestParam("description") String description,
             @RequestParam("category")    String category,
             @RequestParam("priority")    String priority,
-            @RequestParam("location")    String location,
-            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal User currentUser) {
         try {
             Ticket ticket = ticketService.createTicket(
-                    title, description, category, priority, location, image, currentUser);
+                    title, description, category, priority,
+                    location == null ? "" : location,
+                    images == null ? new ArrayList<>() : images,
+                    currentUser);
             return ResponseEntity.status(201).body(ticket);
         } catch (Exception e) {
             return ResponseEntity.badRequest()

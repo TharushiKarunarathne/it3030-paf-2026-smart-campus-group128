@@ -73,10 +73,10 @@ export default function NewTicketPage() {
     category:    'Hardware',
   })
 
-  const [image, setImage]     = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors]   = useState({})
+  const [images, setImages]     = useState([])   // File[]
+  const [previews, setPreviews] = useState([])   // URL[]
+  const [loading, setLoading]   = useState(false)
+  const [errors, setErrors]     = useState({})
 
   // Technicians cannot create tickets
   if (isTechnician) {
@@ -118,18 +118,28 @@ export default function NewTicketPage() {
   }
 
   const handleImage = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return }
-    setImage(file)
-    setPreview(URL.createObjectURL(file))
+    const files = Array.from(e.target.files)
+    const remaining = 3 - images.length
+    if (remaining <= 0) { toast.error('Maximum 3 images allowed'); return }
+    const toAdd = files.slice(0, remaining)
+    const oversized = toAdd.filter(f => f.size > 5 * 1024 * 1024)
+    if (oversized.length) { toast.error('Each image must be under 5MB'); return }
+    setImages(prev => [...prev, ...toAdd])
+    setPreviews(prev => [...prev, ...toAdd.map(f => URL.createObjectURL(f))])
+    // reset input so same file can be re-added after removal
+    e.target.value = ''
+  }
+
+  const removeImage = (idx) => {
+    setImages(prev => prev.filter((_, i) => i !== idx))
+    setPreviews(prev => prev.filter((_, i) => i !== idx))
   }
 
   const switchType = (type) => {
     setTicketType(type)
     setErrors({})
-    setImage(null)
-    setPreview(null)
+    setImages([])
+    setPreviews([])
   }
 
   const validate = () => {
@@ -153,10 +163,10 @@ export default function NewTicketPage() {
       const payload = ticketType === 'resource' ? form : { ...techForm, location: '' }
 
       let response
-      if (image) {
+      if (images.length > 0) {
         const formData = new FormData()
         Object.entries(payload).forEach(([k, v]) => formData.append(k, v))
-        formData.append('image', image)
+        images.forEach(img => formData.append('images', img))
         response = await createTicket(formData)
       } else {
         response = await createTicket(payload)
@@ -358,8 +368,8 @@ export default function NewTicketPage() {
               </div>
 
               {/* Image upload */}
-              <ImageUpload image={image} preview={preview} onChange={handleImage}
-                onRemove={() => { setImage(null); setPreview(null) }} />
+              <ImageUpload images={images} previews={previews}
+                onChange={handleImage} onRemove={removeImage} />
 
               {/* Priority guide */}
               <PriorityGuide />
@@ -414,8 +424,8 @@ export default function NewTicketPage() {
               </div>
 
               {/* Image upload */}
-              <ImageUpload image={image} preview={preview} onChange={handleImage}
-                onRemove={() => { setImage(null); setPreview(null) }} />
+              <ImageUpload images={images} previews={previews}
+                onChange={handleImage} onRemove={removeImage} />
 
               {/* Priority guide */}
               <PriorityGuide isTech />
@@ -451,42 +461,59 @@ export default function NewTicketPage() {
 }
 
 // ── Shared sub-components ──────────────────────────────────
-function ImageUpload({ image, preview, onChange, onRemove }) {
+function ImageUpload({ images, previews, onChange, onRemove }) {
+  const canAdd = images.length < 3
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-        Attach Image <span className="text-gray-400 font-normal">(optional, max 5MB)</span>
-      </label>
-      <label className="flex flex-col items-center justify-center w-full h-32
-                        border-2 border-dashed border-gray-200 rounded-xl cursor-pointer
-                        hover:border-blue-300 hover:bg-blue-50/20 transition-colors">
-        <input type="file" accept="image/*" className="hidden" onChange={onChange} />
-        {preview ? (
-          <img src={preview} alt="Preview" className="h-full w-full object-contain rounded-xl p-1" />
-        ) : (
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="block text-sm font-semibold text-gray-700">
+          Attach Images <span className="text-gray-400 font-normal">(optional, up to 3 · max 5MB each)</span>
+        </label>
+        <span className="text-xs text-gray-400">{images.length}/3</span>
+      </div>
+
+      {/* Thumbnails row */}
+      {previews.length > 0 && (
+        <div className="flex gap-2 mb-2 flex-wrap">
+          {previews.map((src, i) => (
+            <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200">
+              <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60
+                           hover:bg-black/80 text-white flex items-center justify-center
+                           transition-colors"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add button — hidden when at limit */}
+      {canAdd && (
+        <label className="flex flex-col items-center justify-center w-full h-24
+                          border-2 border-dashed border-gray-200 rounded-xl cursor-pointer
+                          hover:border-blue-300 hover:bg-blue-50/20 transition-colors">
+          <input type="file" accept="image/*" multiple className="hidden" onChange={onChange} />
           <div className="text-center">
-            <div className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gray-100">
+            <div className="w-9 h-9 rounded-xl mx-auto mb-1.5 flex items-center justify-center bg-gray-100">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <p className="text-xs font-medium text-gray-500">Click to upload image</p>
-            <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
+            <p className="text-xs font-medium text-gray-500">
+              {images.length === 0 ? 'Click to add images' : `Add more (${3 - images.length} left)`}
+            </p>
+            <p className="text-xs text-gray-400">PNG, JPG up to 5MB each</p>
           </div>
-        )}
-      </label>
-      {image && (
-        <button
-          onClick={onRemove}
-          className="text-xs text-red-500 hover:text-red-700 hover:underline mt-1.5 flex items-center gap-1"
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Remove image
-        </button>
+        </label>
       )}
     </div>
   )

@@ -27,6 +27,7 @@ public class Booking {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String purpose;
+    private Integer expectedAttendees;
 
     private BookingStatus status = BookingStatus.PENDING;
     private String adminNote;
@@ -64,6 +65,7 @@ public class Booking {
     public LocalDateTime getStartTime()    { return startTime; }
     public LocalDateTime getEndTime()      { return endTime; }
     public String getPurpose()             { return purpose; }
+    public Integer getExpectedAttendees()  { return expectedAttendees; }
     public BookingStatus getStatus()       { return status; }
     public String getAdminNote()           { return adminNote; }
     public LocalDateTime getCheckedInAt()  { return checkedInAt; }
@@ -82,6 +84,7 @@ public class Booking {
     public void setStartTime(LocalDateTime startTime)   { this.startTime = startTime; }
     public void setEndTime(LocalDateTime endTime)       { this.endTime = endTime; }
     public void setPurpose(String purpose)              { this.purpose = purpose; }
+    public void setExpectedAttendees(Integer v)         { this.expectedAttendees = v; }
     public void setStatus(BookingStatus status)         { this.status = status; }
     public void setAdminNote(String adminNote)          { this.adminNote = adminNote; }
     public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }

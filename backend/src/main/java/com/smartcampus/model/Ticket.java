@@ -31,8 +31,9 @@ public class Ticket {
     private String assignedToId;
     private String assignedToName;
 
-    // Image attachment URL
-    private String imageUrl;
+    // Image attachment URLs (up to 3)
+    private String imageUrl;                              // legacy single-image field
+    private List<String> imageUrls = new ArrayList<>();  // multi-image field
     private String resolutionNote;
 
     // Embedded comments
@@ -66,7 +67,9 @@ public class Ticket {
     public String getReportedByName()   { return reportedByName; }
     public String getAssignedToId()     { return assignedToId; }
     public String getAssignedToName()   { return assignedToName; }
-    public String getImageUrl()         { return imageUrl; }
+    public String getImageUrl()          { return imageUrl; }
+    public List<String> getImageUrls()   { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
     public String getResolutionNote()              { return resolutionNote; }
     public void setResolutionNote(String resolutionNote) { this.resolutionNote = resolutionNote; }
     public List<Comment> getComments()  { return comments; }

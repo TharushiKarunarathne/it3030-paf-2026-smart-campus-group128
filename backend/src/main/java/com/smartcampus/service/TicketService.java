@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -84,7 +85,7 @@ public class TicketService {
                                String category,
                                String priority,
                                String location,
-                               MultipartFile image,
+                               List<MultipartFile> images,
                                User currentUser) throws IOException {
 
         // Technicians cannot create tickets
@@ -103,10 +104,20 @@ public class TicketService {
                 .reportedByName(currentUser.getName())
                 .build();
 
-        // Handle image upload
-        if (image != null && !image.isEmpty()) {
-            String imageUrl = fileStorageService.saveTicketImage(image);
-            ticket.setImageUrl(imageUrl);
+        // Handle image uploads (up to 3)
+        if (images != null && !images.isEmpty()) {
+            List<String> savedUrls = new ArrayList<>();
+            int count = 0;
+            for (MultipartFile img : images) {
+                if (img != null && !img.isEmpty() && count < 3) {
+                    savedUrls.add(fileStorageService.saveTicketImage(img));
+                    count++;
+                }
+            }
+            if (!savedUrls.isEmpty()) {
+                ticket.setImageUrls(savedUrls);
+                ticket.setImageUrl(savedUrls.get(0)); // legacy compat
+            }
         }
 
         Ticket saved = ticketRepository.save(ticket);

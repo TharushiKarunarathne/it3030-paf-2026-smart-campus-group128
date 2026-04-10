@@ -206,7 +206,7 @@ export default function TicketDetailPage() {
   const [statusLoading, setStatusLoading]       = useState(false)
   const [assignLoading, setAssignLoading]       = useState(false)
   const [resolveLoading, setResolveLoading]     = useState(false)
-  const [imageExpanded, setImageExpanded]       = useState(false)
+  const [imageExpanded, setImageExpanded]       = useState(null) // stores URL of expanded image
   const [showResolveModal, setShowResolveModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -358,17 +358,17 @@ export default function TicketDetailPage() {
         <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
           style={{ backdropFilter: 'blur(4px)' }}
-          onClick={() => setImageExpanded(false)}
+          onClick={() => setImageExpanded(null)}
         >
           <img
-            src={ticket.imageUrl}
+            src={imageExpanded}
             alt="Ticket attachment"
             className="max-w-full max-h-full rounded-xl object-contain"
           />
           <button
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20
                        text-white flex items-center justify-center transition-colors"
-            onClick={() => setImageExpanded(false)}
+            onClick={() => setImageExpanded(null)}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -506,30 +506,43 @@ export default function TicketDetailPage() {
             </div>
           )}
 
-          {/* Image */}
-          {ticket.imageUrl && (
-            <SectionCard title="Attachment">
-              <div
-                className="cursor-pointer rounded-xl overflow-hidden border border-gray-100
-                           hover:border-blue-200 transition-colors"
-                onClick={() => setImageExpanded(true)}
-              >
-                <img
-                  src={ticket.imageUrl}
-                  alt="Ticket attachment"
-                  className="w-full max-h-64 object-cover hover:opacity-90 transition-opacity"
-                />
-                <p className="text-xs text-center text-gray-400 py-2 bg-gray-50 flex items-center
-                               justify-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                  </svg>
-                  Click to enlarge
-                </p>
-              </div>
-            </SectionCard>
-          )}
+          {/* Images gallery */}
+          {(() => {
+            // Prefer imageUrls array; fall back to legacy imageUrl
+            const allUrls = (ticket.imageUrls && ticket.imageUrls.length > 0)
+              ? ticket.imageUrls
+              : ticket.imageUrl ? [ticket.imageUrl] : []
+            if (allUrls.length === 0) return null
+            return (
+              <SectionCard title={`Attachments (${allUrls.length})`}>
+                <div className={`grid gap-2 ${allUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {allUrls.map((url, i) => (
+                    <div
+                      key={i}
+                      className="cursor-pointer rounded-xl overflow-hidden border border-gray-100
+                                 hover:border-blue-200 transition-colors"
+                      onClick={() => setImageExpanded(url)}
+                    >
+                      <img
+                        src={url}
+                        alt={`Attachment ${i + 1}`}
+                        className="w-full object-cover hover:opacity-90 transition-opacity"
+                        style={{ maxHeight: allUrls.length === 1 ? '16rem' : '10rem' }}
+                      />
+                      <p className="text-xs text-center text-gray-400 py-1.5 bg-gray-50
+                                    flex items-center justify-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        Click to enlarge
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            )
+          })()}
 
           {/* Comments */}
           <SectionCard title={`Comments (${ticket.comments?.length ?? 0})`}>

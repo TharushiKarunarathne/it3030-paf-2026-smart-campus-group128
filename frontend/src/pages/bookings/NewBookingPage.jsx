@@ -232,7 +232,7 @@ export default function NewBookingPage() {
   // Form state
   const [loading, setLoading] = useState(false)
   const [form, setForm]       = useState({
-    date: '', startTime: '', endTime: '', purpose: '',
+    date: '', startTime: '', endTime: '', purpose: '', expectedAttendees: '',
   })
   const [error, setError] = useState('')
 
@@ -279,7 +279,7 @@ export default function NewBookingPage() {
   const handleChangeResource = () => {
     setSelectedResource(null)
     setStep(1)
-    setForm({ date: '', startTime: '', endTime: '', purpose: '' })
+    setForm({ date: '', startTime: '', endTime: '', purpose: '', expectedAttendees: '' })
     setError('')
   }
 
@@ -336,14 +336,19 @@ export default function NewBookingPage() {
       const startTime = `${form.date}T${form.startTime}:00`
       const endTime   = `${form.date}T${form.endTime}:00`
 
-      const { data } = await createBooking({
+      const payload = {
         resourceId:   selectedResource.id,
         resourceName: selectedResource.name,
         resourceType: selectedResource.type,
         startTime,
         endTime,
         purpose: form.purpose.trim(),
-      })
+      }
+      if (form.expectedAttendees && parseInt(form.expectedAttendees) > 0) {
+        payload.expectedAttendees = parseInt(form.expectedAttendees)
+      }
+
+      const { data } = await createBooking(payload)
 
       toast.success('Booking submitted! Waiting for approval.')
       navigate(`/bookings/${data.id}`)
@@ -630,6 +635,35 @@ export default function NewBookingPage() {
             />
             <p className="text-xs text-gray-400 mt-1">
               Be specific — this helps admin approve faster.
+            </p>
+          </div>
+
+          {/* Expected attendees */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Expected Attendees
+              <span className="ml-1 text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </span>
+              <input
+                type="number"
+                name="expectedAttendees"
+                min="1"
+                max="500"
+                className="input pl-9"
+                placeholder="e.g. 25"
+                value={form.expectedAttendees}
+                onChange={handleChange}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Helps admin verify capacity fits the resource.
             </p>
           </div>
 
