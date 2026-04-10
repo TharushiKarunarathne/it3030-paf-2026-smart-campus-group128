@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getResourceById, updateResource } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
-// Same RESOURCE_TYPES and DetailsField component as NewResourcePage — copy them here
-
+// Resource type configuration object.
+// Each resource type contains its display label, icon, and related type-specific fields.
 const RESOURCE_TYPES = {
   LECTURE_HALL: {
     label: 'Lecture Hall', icon: '🏛️',
@@ -78,6 +78,8 @@ const RESOURCE_TYPES = {
   },
 }
 
+// Reusable loading spinner component.
+// Displayed while fetching or saving resource data.
 function Spinner() {
   return (
     <svg
@@ -92,6 +94,8 @@ function Spinner() {
   )
 }
 
+// Reusable component for rendering dynamic type-specific fields.
+// Handles checkbox fields, select fields, and standard input fields.
 function DetailsField({ field, value, onChange }) {
   if (field.type === 'checkbox') return (
     <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-colors cursor-pointer">
@@ -155,17 +159,25 @@ function DetailsField({ field, value, onChange }) {
   )
 }
 
+// Main page component for editing an existing resource.
+// Loads resource data, fills the form, and submits updated values.
 export default function EditResourcePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+
+  // Main form state for common resource fields.
   const [form, setForm] = useState({
     name: '', type: 'LECTURE_HALL',
     location: '', capacity: '', description: '', status: 'AVAILABLE',
   })
+
+  // State for resource-specific detail fields.
   const [details, setDetails] = useState({})
 
+  // Loads the existing resource data when the page opens.
+  // If the resource is not found, shows an error and redirects back.
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -189,15 +201,20 @@ export default function EditResourcePage() {
     fetch()
   }, [id, navigate])
 
+  // Handles updates to the main form fields.
   const handleFormChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  // Handles updates to the resource-specific detail fields.
+  // Supports checkbox fields and other input types.
   const handleDetailChange = (e) => {
     const { name, type, value, checked } = e.target
     setDetails(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
+  // Handles form submission for updating the resource.
+  // Validates required fields and sends the updated data to the backend.
   const handleSubmit = async () => {
     if (!form.name || !form.type) {
       toast.error('Name and type are required.')
@@ -219,6 +236,7 @@ export default function EditResourcePage() {
     }
   }
 
+  // Loading state UI shown while fetching existing resource details.
   if (fetching) return (
     <div className="max-w-2xl mx-auto page-fade-in">
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -235,10 +253,12 @@ export default function EditResourcePage() {
     </div>
   )
 
+  // Finds the current selected resource type configuration.
   const currentType = RESOURCE_TYPES[form.type]
 
   return (
     <div className="max-w-2xl mx-auto page-fade-in">
+      {/* Page header section */}
       <div
         className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
         style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
@@ -276,9 +296,11 @@ export default function EditResourcePage() {
         </div>
       </div>
 
+      {/* Main edit form container */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="p-6 space-y-5">
 
+          {/* Resource name and type section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -309,6 +331,7 @@ export default function EditResourcePage() {
             </div>
           </div>
 
+          {/* Location and status section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -339,6 +362,7 @@ export default function EditResourcePage() {
             </div>
           </div>
 
+          {/* Capacity section - only shown for non-vehicle resources */}
           {form.type !== 'VEHICLE' && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -355,6 +379,7 @@ export default function EditResourcePage() {
             </div>
           )}
 
+          {/* Description section */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Description
@@ -368,6 +393,7 @@ export default function EditResourcePage() {
             />
           </div>
 
+          {/* Dynamic resource-specific fields section */}
           {currentType && (
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
               <div className="flex items-center gap-3 mb-4">
@@ -397,6 +423,7 @@ export default function EditResourcePage() {
             </div>
           )}
 
+          {/* Action buttons section */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={handleSubmit}

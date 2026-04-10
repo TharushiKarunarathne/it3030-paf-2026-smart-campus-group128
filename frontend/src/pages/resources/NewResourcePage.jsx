@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { createResource } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
+// Resource type configuration object.
+// Each resource type contains a label, icon, and its own type-specific fields.
 const RESOURCE_TYPES = {
   LECTURE_HALL: {
     label: 'Lecture Hall', icon: '🏛️',
@@ -76,6 +78,8 @@ const RESOURCE_TYPES = {
   },
 }
 
+// Utility function to generate empty default values
+// for the selected resource type details.
 function buildEmptyDetails(type) {
   if (!RESOURCE_TYPES[type]) return {}
   return RESOURCE_TYPES[type].fields.reduce((acc, f) => {
@@ -84,6 +88,7 @@ function buildEmptyDetails(type) {
   }, {})
 }
 
+// Loading spinner shown inside the submit button while creating a resource.
 function Spinner() {
   return (
     <svg
@@ -98,6 +103,8 @@ function Spinner() {
   )
 }
 
+// Reusable component to render each type-specific field.
+// Handles checkbox, select, and normal input field rendering.
 function DetailsField({ field, value, onChange }) {
   if (field.type === 'checkbox') {
     return (
@@ -165,11 +172,14 @@ function DetailsField({ field, value, onChange }) {
   )
 }
 
+// Main page component for adding a new resource.
+// Handles form state, detail state, submission, and UI rendering.
 export default function NewResourcePage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [created, setCreated] = useState(null)
 
+  // Main form state for common resource fields.
   const [form, setForm] = useState({
     name: '',
     type: 'LECTURE_HALL',
@@ -179,8 +189,11 @@ export default function NewResourcePage() {
     status: 'AVAILABLE',
   })
 
+  // State for type-specific details based on selected resource type.
   const [details, setDetails] = useState(buildEmptyDetails('LECTURE_HALL'))
 
+  // Handles changes in common form fields.
+  // If resource type changes, rebuilds the details object for the new type.
   const handleFormChange = (e) => {
     const { name, value } = e.target
     if (name === 'type') {
@@ -191,11 +204,15 @@ export default function NewResourcePage() {
     }
   }
 
+  // Handles changes in the type-specific detail fields.
+  // Supports both checkbox and normal text/select inputs.
   const handleDetailChange = (e) => {
     const { name, type, value, checked } = e.target
     setDetails(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
+  // Handles resource creation.
+  // Validates required fields, sends API request, and manages success/error states.
   const handleSubmit = async () => {
     if (!form.name || !form.type) {
       toast.error('Name and type are required.')
@@ -218,11 +235,12 @@ export default function NewResourcePage() {
     }
   }
 
+  // Gets the currently selected resource type configuration.
   const currentType = RESOURCE_TYPES[form.type]
 
   return (
     <div className="max-w-2xl mx-auto page-fade-in">
-      {/* Hero header */}
+      {/* Page header section with back button and title */}
       <div
         className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
         style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
@@ -260,10 +278,10 @@ export default function NewResourcePage() {
         </div>
       </div>
 
-      {/* Form card */}
+      {/* Main form container */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         <div className="p-6 space-y-5">
-          {/* Name + Type */}
+          {/* Basic resource information section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -297,7 +315,7 @@ export default function NewResourcePage() {
             </div>
           </div>
 
-          {/* Location + Status */}
+          {/* Location and status section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -329,7 +347,7 @@ export default function NewResourcePage() {
             </div>
           </div>
 
-          {/* Capacity */}
+          {/* Capacity section - hidden for vehicle type */}
           {form.type !== 'VEHICLE' && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -347,7 +365,7 @@ export default function NewResourcePage() {
             </div>
           )}
 
-          {/* Description */}
+          {/* Description section */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Description
@@ -362,7 +380,7 @@ export default function NewResourcePage() {
             />
           </div>
 
-          {/* Type specific fields */}
+          {/* Dynamic type-specific fields section */}
           {currentType && (
             <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
               <div className="flex items-center gap-3 mb-4">
@@ -392,7 +410,7 @@ export default function NewResourcePage() {
             </div>
           )}
 
-          {/* Buttons / success */}
+          {/* Success message or form action buttons */}
           {created ? (
             <div className="rounded-2xl border border-green-100 bg-green-50 p-6 text-center">
               <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-green-100">
@@ -408,6 +426,7 @@ export default function NewResourcePage() {
                 {created.name} has been added to the system.
               </p>
 
+              {/* Navigation options after successful creation */}
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link
                   to="/resources"
@@ -445,6 +464,7 @@ export default function NewResourcePage() {
             </div>
           ) : (
             <div className="flex gap-3 pt-2">
+              {/* Submit button */}
               <button
                 onClick={handleSubmit}
                 disabled={loading}
@@ -461,6 +481,7 @@ export default function NewResourcePage() {
                 {loading ? 'Creating...' : 'Create Resource'}
               </button>
 
+              {/* Cancel button */}
               <Link
                 to="/resources"
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors text-center"
