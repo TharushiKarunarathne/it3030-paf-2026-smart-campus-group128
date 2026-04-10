@@ -34,10 +34,24 @@ function formatTime(dt) {
   })
 }
 
+function Spinner() {
+  return (
+    <svg
+      className="w-4 h-4"
+      style={{ animation: 'spin 0.8s linear infinite' }}
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  )
+}
+
 // ── Availability Panel ─────────────────────────────────
 function AvailabilityPanel({ resourceId, selectedDate }) {
   const [bookedSlots, setBookedSlots] = useState([])
-  const [loading, setLoading]         = useState(false)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!resourceId || !selectedDate) {
@@ -87,9 +101,8 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-100 overflow-hidden">
-      {/* Header */}
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+    <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+      <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-100">
         <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
           📅 Availability for{' '}
           {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
@@ -102,12 +115,11 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
         {loading ? (
           <div className="space-y-2">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="h-10 bg-gray-50 rounded-lg animate-pulse" />
+              <div key={i} className="h-12 bg-gray-50 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : bookedSlots.length === 0 ? (
-          <div className="flex items-center gap-3 bg-green-50 border
-                          border-green-100 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
             <span className="text-green-500 text-lg">✓</span>
             <div>
               <p className="text-sm font-semibold text-green-700">
@@ -120,15 +132,15 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
           </div>
         ) : (
           <div className="space-y-2">
-
-            {/* Booked slots */}
             <p className="text-xs font-medium text-gray-500 mb-2">
               Booked slots — avoid these times:
             </p>
+
             {bookedSlots.map((slot, i) => (
-              <div key={i}
-                className="flex items-center gap-3 bg-red-50 border
-                           border-red-100 rounded-xl px-4 py-2.5">
+              <div
+                key={i}
+                className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3"
+              >
                 <span className="text-red-400 text-sm">🔴</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-red-700">
@@ -140,25 +152,21 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
                     </p>
                   )}
                 </div>
-                <span className="text-xs bg-red-100 text-red-600
-                                 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                   Booked
                 </span>
               </div>
             ))}
 
-            {/* Available gaps */}
             <p className="text-xs font-medium text-gray-500 mt-3 mb-2">
               Available gaps:
             </p>
 
-            {/* Before first booking */}
             {(() => {
               const firstStart = bookedSlots[0].startTime.split('T')[1].substring(0, 5)
               if (firstStart > '08:00') {
                 return (
-                  <div className="flex items-center gap-3 bg-green-50 border
-                                  border-green-100 rounded-xl px-4 py-2.5">
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
                     <span className="text-green-500 text-sm">✅</span>
                     <p className="text-sm font-medium text-green-700">
                       08:00 AM – {fmtTime(bookedSlots[0].startTime)}
@@ -169,18 +177,18 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
               return null
             })()}
 
-            {/* Gaps between bookings */}
             {bookedSlots.slice(0, -1).map((slot, i) => {
               const gapStartStr = slot.endTime.split('T')[1].substring(0, 5)
-              const gapEndStr   = bookedSlots[i + 1].startTime.split('T')[1].substring(0, 5)
-              const [sh, sm]    = gapStartStr.split(':').map(Number)
-              const [eh, em]    = gapEndStr.split(':').map(Number)
-              const gapMins     = (eh * 60 + em) - (sh * 60 + sm)
+              const gapEndStr = bookedSlots[i + 1].startTime.split('T')[1].substring(0, 5)
+              const [sh, sm] = gapStartStr.split(':').map(Number)
+              const [eh, em] = gapEndStr.split(':').map(Number)
+              const gapMins = (eh * 60 + em) - (sh * 60 + sm)
               if (gapMins < 30) return null
               return (
-                <div key={i}
-                  className="flex items-center gap-3 bg-green-50 border
-                             border-green-100 rounded-xl px-4 py-2.5">
+                <div
+                  key={i}
+                  className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3"
+                >
                   <span className="text-green-500 text-sm">✅</span>
                   <p className="text-sm font-medium text-green-700">
                     {fmtTime(slot.endTime)} – {fmtTime(bookedSlots[i + 1].startTime)}
@@ -189,14 +197,12 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
               )
             })}
 
-            {/* After last booking */}
             {(() => {
               const lastEnd = bookedSlots[bookedSlots.length - 1].endTime
                 .split('T')[1].substring(0, 5)
               if (lastEnd < '22:00') {
                 return (
-                  <div className="flex items-center gap-3 bg-green-50 border
-                                  border-green-100 rounded-xl px-4 py-2.5">
+                  <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
                     <span className="text-green-500 text-sm">✅</span>
                     <p className="text-sm font-medium text-green-700">
                       {fmtTime(bookedSlots[bookedSlots.length - 1].endTime)} – 10:00 PM
@@ -216,22 +222,22 @@ function AvailabilityPanel({ resourceId, selectedDate }) {
 export default function NewBookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const resourceIdFromUrl   = searchParams.get('resourceId')
+  const resourceIdFromUrl = searchParams.get('resourceId')
   const resourceNameFromUrl = searchParams.get('resourceName')
 
   // Step state
   const [step, setStep] = useState(resourceIdFromUrl ? 2 : 1)
 
   // Resource browser state
-  const [allResources, setAllResources]         = useState([])
+  const [allResources, setAllResources] = useState([])
   const [resourcesLoading, setResourcesLoading] = useState(false)
   const [selectedResource, setSelectedResource] = useState(null)
-  const [typeFilter, setTypeFilter]             = useState('ALL')
-  const [search, setSearch]                     = useState('')
+  const [typeFilter, setTypeFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
 
   // Form state
   const [loading, setLoading] = useState(false)
-  const [form, setForm]       = useState({
+  const [form, setForm] = useState({
     date: '', startTime: '', endTime: '', purpose: '', expectedAttendees: '',
   })
   const [error, setError] = useState('')
@@ -303,22 +309,22 @@ export default function NewBookingPage() {
   }
 
   const validate = () => {
-    if (!selectedResource)              return 'Please select a resource.'
-    if (!form.date)                     return 'Please select a date.'
-    if (!form.startTime)                return 'Please select a start time.'
-    if (!form.endTime)                  return 'Please select an end time.'
+    if (!selectedResource) return 'Please select a resource.'
+    if (!form.date) return 'Please select a date.'
+    if (!form.startTime) return 'Please select a start time.'
+    if (!form.endTime) return 'Please select an end time.'
     if (form.endTime <= form.startTime) return 'End time must be after start time.'
-    if (!form.purpose.trim())           return 'Please enter the purpose of this booking.'
+    if (!form.purpose.trim()) return 'Please enter the purpose of this booking.'
 
     // Past time check using local time correctly
-    const now        = new Date()
-    const localNow   = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
-    const start      = new Date(`${form.date}T${form.startTime}:00`)
+    const now = new Date()
+    const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+    const start = new Date(`${form.date}T${form.startTime}:00`)
     if (start < localNow) return 'Cannot book a time slot in the past.'
 
-    const end  = new Date(`${form.date}T${form.endTime}:00`)
+    const end = new Date(`${form.date}T${form.endTime}:00`)
     const mins = (end - start) / 60000
-    if (mins < 30)  return 'Minimum booking duration is 30 minutes.'
+    if (mins < 30) return 'Minimum booking duration is 30 minutes.'
     if (mins > 480) return 'Maximum booking duration is 8 hours.'
 
     return null
@@ -334,10 +340,10 @@ export default function NewBookingPage() {
       // Send local time directly — no UTC conversion
       // Backend parses as LocalDateTime so no timezone shift
       const startTime = `${form.date}T${form.startTime}:00`
-      const endTime   = `${form.date}T${form.endTime}:00`
+      const endTime = `${form.date}T${form.endTime}:00`
 
       const payload = {
-        resourceId:   selectedResource.id,
+        resourceId: selectedResource.id,
         resourceName: selectedResource.name,
         resourceType: selectedResource.type,
         startTime,
@@ -378,118 +384,144 @@ export default function NewBookingPage() {
   // ── Step 1: Resource Browser ───────────────────────
   if (step === 1) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <Link to="/bookings"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500
-                     hover:text-gray-800 transition-colors mb-6">
-          ← Back to My Bookings
-        </Link>
+      <div className="max-w-3xl mx-auto page-fade-in">
+        <div
+          className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
+          style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
+        >
+          <div
+            className="absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/3 translate-x-1/4 opacity-10 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)' }}
+          />
 
-        <div className="rounded-t-2xl overflow-hidden"
-             style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
-          <div className="px-6 py-5">
-            <h1 className="text-xl font-bold text-white mb-0.5">New Booking</h1>
-            <p className="text-blue-200 text-sm">
-              Step 1 of 2 — Choose a resource to book
-            </p>
+          <div className="relative z-10">
+            <Link
+              to="/bookings"
+              className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors text-sm mb-4"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to My Bookings
+            </Link>
+
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(255,255,255,0.15)' }}
+              >
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-2xl font-extrabold text-white">New Booking</h1>
+                <p className="text-blue-200 text-sm mt-0.5">
+                  Step 1 of 2 — Choose a resource to book
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-5">
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="p-6">
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Search
+              </label>
+              <input
+                className="input"
+                placeholder="Search by name or location..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
 
-          <div className="flex gap-3 mb-4">
-            <input
-              className="input flex-1"
-              placeholder="Search by name or location..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2 mb-5">
-            {TYPE_FILTERS.map(f => (
-              <button
-                key={f.key}
-                onClick={() => setTypeFilter(f.key)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors
-                  ${typeFilter === f.key
-                    ? 'bg-indigo-700 text-white'
-                    : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
+            <div className="flex flex-wrap gap-2 mb-5">
+              {TYPE_FILTERS.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setTypeFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    typeFilter === f.key
+                      ? 'text-white'
+                      : 'bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300'
                   }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {resourcesLoading ? (
-            <div className="grid sm:grid-cols-2 gap-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-24 bg-gray-50 rounded-xl animate-pulse" />
+                  style={typeFilter === f.key ? { background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' } : {}}
+                >
+                  {f.label}
+                </button>
               ))}
             </div>
-          ) : filteredResources.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-3xl mb-3">🏛️</p>
-              <p className="text-gray-500 text-sm">No available resources found</p>
-              <p className="text-gray-400 text-xs mt-1">
-                Try adjusting your search or filter
-              </p>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-3">
-              {filteredResources.map(resource => {
-                const typeConf = TYPE_CONFIG[resource.type] ??
-                  { label: resource.type, color: 'bg-gray-50 text-gray-600', accent: 'bg-gray-400' }
-                const icon = TYPE_ICON[resource.type] ?? '📦'
 
-                return (
-                  <button
-                    key={resource.id}
-                    onClick={() => handleSelectResource(resource)}
-                    className="text-left border border-gray-100 rounded-xl p-4
-                               hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5
-                               transition-all duration-200 bg-white group"
-                  >
-                    <div className={`h-0.5 ${typeConf.accent} rounded-full mb-3
-                                     opacity-0 group-hover:opacity-100 transition-opacity`} />
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center
-                                       justify-center text-xl flex-shrink-0 ${typeConf.color}`}>
-                        {icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">
-                          {resource.name}
-                        </p>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider mt-0.5">
-                          {typeConf.label}
-                        </p>
-                        {resource.location && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            📍 {resource.location}
-                          </p>
-                        )}
-                        {resource.capacity && (
-                          <p className="text-xs text-gray-500">
-                            👥 Capacity: {resource.capacity}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-indigo-400 text-lg group-hover:translate-x-1
-                                       transition-transform flex-shrink-0">
-                        →
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+            {resourcesLoading ? (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-28 bg-gray-50 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : filteredResources.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-gray-100 text-2xl">
+                  🏛️
+                </div>
+                <p className="text-gray-600 text-sm font-medium">No available resources found</p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Try adjusting your search or filter
+                </p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {filteredResources.map(resource => {
+                  const typeConf = TYPE_CONFIG[resource.type] ??
+                    { label: resource.type, color: 'bg-gray-50 text-gray-600', accent: 'bg-gray-400' }
+                  const icon = TYPE_ICON[resource.type] ?? '📦'
 
-          <p className="text-xs text-gray-400 text-center mt-4">
-            Only available resources are shown
-          </p>
+                  return (
+                    <button
+                      key={resource.id}
+                      onClick={() => handleSelectResource(resource)}
+                      className="text-left rounded-2xl border border-gray-100 bg-white p-4 hover:border-blue-200 hover:shadow-md transition-all duration-200 group"
+                    >
+                      <div className={`h-1 ${typeConf.accent} rounded-full mb-4 opacity-80`} />
+                      <div className="flex items-start gap-3">
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${typeConf.color}`}>
+                          {icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 text-sm truncate">
+                            {resource.name}
+                          </p>
+                          <p className="text-xs text-gray-400 uppercase tracking-wider mt-0.5">
+                            {typeConf.label}
+                          </p>
+                          {resource.location && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              📍 {resource.location}
+                            </p>
+                          )}
+                          {resource.capacity && (
+                            <p className="text-xs text-gray-500">
+                              👥 Capacity: {resource.capacity}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-blue-400 text-lg group-hover:translate-x-1 transition-transform flex-shrink-0">
+                          →
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 text-center mt-5">
+              Only available resources are shown
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -497,38 +529,60 @@ export default function NewBookingPage() {
 
   // ── Step 2: Booking Form ───────────────────────────
   return (
-    <div className="max-w-xl mx-auto">
-      <Link to="/bookings"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500
-                   hover:text-gray-800 transition-colors mb-6">
-        ← Back to My Bookings
-      </Link>
+    <div className="max-w-xl mx-auto page-fade-in">
+      <div
+        className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
+      >
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/3 translate-x-1/4 opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)' }}
+        />
 
-      <div className="rounded-t-2xl overflow-hidden"
-           style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
-        <div className="px-6 py-5">
-          <h1 className="text-xl font-bold text-white mb-0.5">New Booking</h1>
-          <p className="text-blue-200 text-sm">
-            Step 2 of 2 — Fill in your booking details
-          </p>
+        <div className="relative z-10">
+          <Link
+            to="/bookings"
+            className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors text-sm mb-4"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to My Bookings
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-white">New Booking</h1>
+              <p className="text-blue-200 text-sm mt-0.5">
+                Step 2 of 2 — Fill in your booking details
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-6">
-        <div className="space-y-5">
-
-          {/* Selected resource display */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="p-6 space-y-5">
           {selectedResource && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400
-                                uppercase tracking-wider mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Resource
               </label>
-              <div className="flex items-center gap-3 bg-indigo-50/60 border
-                              border-indigo-100 rounded-xl p-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center
-                                 text-xl flex-shrink-0
-                                 ${TYPE_CONFIG[selectedResource.type]?.color ?? 'bg-gray-50'}`}>
+              <div className="flex items-center gap-3 bg-blue-50/60 border border-blue-100 rounded-2xl p-4">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
+                    TYPE_CONFIG[selectedResource.type]?.color ?? 'bg-gray-50'
+                  }`}
+                >
                   {TYPE_ICON[selectedResource.type] ?? '📦'}
                 </div>
                 <div className="flex-1">
@@ -543,15 +597,15 @@ export default function NewBookingPage() {
                 {!resourceIdFromUrl ? (
                   <button
                     onClick={handleChangeResource}
-                    className="text-xs text-indigo-600 hover:text-indigo-800
-                               font-medium underline underline-offset-2 flex-shrink-0">
+                    className="text-xs text-blue-700 hover:text-blue-900 font-medium underline underline-offset-2 flex-shrink-0"
+                  >
                     Change
                   </button>
                 ) : (
                   <Link
                     to="/resources"
-                    className="text-xs text-gray-400 hover:text-gray-600
-                               underline underline-offset-2 flex-shrink-0">
+                    className="text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2 flex-shrink-0"
+                  >
                     Change
                   </Link>
                 )}
@@ -559,10 +613,9 @@ export default function NewBookingPage() {
             </div>
           )}
 
-          {/* Date */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Date <span className="text-red-400">*</span>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -574,7 +627,6 @@ export default function NewBookingPage() {
             />
           </div>
 
-          {/* Availability Panel — shows after date is picked */}
           {selectedResource && (
             <AvailabilityPanel
               resourceId={selectedResource.id}
@@ -582,11 +634,10 @@ export default function NewBookingPage() {
             />
           )}
 
-          {/* Start + End time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                Start time <span className="text-red-400">*</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Start time <span className="text-red-500">*</span>
               </label>
               <input
                 type="time"
@@ -597,8 +648,8 @@ export default function NewBookingPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                End time <span className="text-red-400">*</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                End time <span className="text-red-500">*</span>
               </label>
               <input
                 type="time"
@@ -610,20 +661,17 @@ export default function NewBookingPage() {
             </div>
           </div>
 
-          {/* Duration chip */}
           {durationLabel && (
             <div className="flex items-center gap-2 -mt-2">
-              <span className="text-xs bg-green-50 text-green-700 border
-                               border-green-100 px-3 py-1 rounded-full font-medium">
+              <span className="text-xs bg-green-50 text-green-700 border border-green-100 px-3 py-1 rounded-full font-medium">
                 ⏱ {durationLabel}
               </span>
             </div>
           )}
 
-          {/* Purpose */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Purpose <span className="text-red-400">*</span>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Purpose <span className="text-red-500">*</span>
             </label>
             <textarea
               name="purpose"
@@ -638,9 +686,8 @@ export default function NewBookingPage() {
             </p>
           </div>
 
-          {/* Expected attendees */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Expected Attendees
               <span className="ml-1 text-gray-400 font-normal">(optional)</span>
             </label>
@@ -667,14 +714,12 @@ export default function NewBookingPage() {
             </p>
           </div>
 
-          {/* Validation error */}
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
-          {/* Info note */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
             <p className="text-xs text-blue-700 leading-relaxed">
               ℹ️ Bookings require admin approval. You'll be notified once
@@ -682,22 +727,23 @@ export default function NewBookingPage() {
             </p>
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-1">
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="btn-primary flex-1 py-2.5 disabled:opacity-50
-                         disabled:cursor-not-allowed">
-              {loading ? 'Submitting...' : '📅 Submit booking request'}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}
+            >
+              {loading ? <Spinner /> : <span>📅</span>}
+              {loading ? 'Submitting...' : 'Submit booking request'}
             </button>
             <button
               onClick={handleChangeResource}
-              className="btn-secondary px-4 py-2.5">
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
               ← Back
             </button>
           </div>
-
         </div>
       </div>
     </div>

@@ -78,36 +78,79 @@ const RESOURCE_TYPES = {
   },
 }
 
+function Spinner() {
+  return (
+    <svg
+      className="w-4 h-4"
+      style={{ animation: 'spin 0.8s linear infinite' }}
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
+  )
+}
+
 function DetailsField({ field, value, onChange }) {
   if (field.type === 'checkbox') return (
-    <label className="flex items-center gap-3 py-2 cursor-pointer group">
-      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center
-                       transition-colors
-                       ${value
-                         ? 'bg-indigo-600 border-indigo-600'
-                         : 'border-gray-300 group-hover:border-indigo-400'
-                       }`}>
-        {value && <span className="text-white text-xs">✓</span>}
+    <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-colors cursor-pointer">
+      <div
+        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+          value ? 'bg-blue-700 border-blue-700' : 'border-gray-300'
+        }`}
+      >
+        {value && (
+          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
       </div>
-      <input type="checkbox" name={field.name} checked={!!value}
-        onChange={onChange} className="sr-only" />
-      <span className="text-sm text-gray-700">{field.label}</span>
+      <input
+        type="checkbox"
+        name={field.name}
+        checked={!!value}
+        onChange={onChange}
+        className="sr-only"
+      />
+      <span className="text-sm font-medium text-gray-700">{field.label}</span>
     </label>
   )
+
   if (field.type === 'select') return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">{field.label}</label>
-      <select name={field.name} className="input" value={value ?? ''} onChange={onChange}>
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+        {field.label}
+      </label>
+      <select
+        name={field.name}
+        className="input"
+        value={value ?? ''}
+        onChange={onChange}
+      >
         <option value="">Select...</option>
         {field.options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
   )
+
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">{field.label}</label>
-      <input type={field.type} name={field.name} className="input"
-        placeholder={field.placeholder} value={value ?? ''} onChange={onChange} />
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+        {field.label}
+      </label>
+      <input
+        type={field.type}
+        name={field.name}
+        className="input"
+        placeholder={field.placeholder}
+        value={value ?? ''}
+        onChange={onChange}
+      />
     </div>
   )
 }
@@ -115,7 +158,7 @@ function DetailsField({ field, value, onChange }) {
 export default function EditResourcePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [loading, setLoading]   = useState(false)
+  const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [form, setForm] = useState({
     name: '', type: 'LECTURE_HALL',
@@ -177,42 +220,88 @@ export default function EditResourcePage() {
   }
 
   if (fetching) return (
-    <div className="flex justify-center py-16">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+    <div className="max-w-2xl mx-auto page-fade-in">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="px-8 py-14 flex flex-col items-center justify-center">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white mb-4"
+            style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}
+          >
+            <Spinner />
+          </div>
+          <p className="text-sm font-medium text-gray-600">Loading resource details...</p>
+        </div>
+      </div>
     </div>
   )
 
   const currentType = RESOURCE_TYPES[form.type]
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Link to={`/resources/${id}`}
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500
-                   hover:text-gray-800 transition-colors mb-6">
-        ← Back to Resource
-      </Link>
+    <div className="max-w-2xl mx-auto page-fade-in">
+      <div
+        className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
+      >
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/3 translate-x-1/4 opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)' }}
+        />
 
-      <div className="rounded-t-2xl overflow-hidden"
-           style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
-        <div className="px-6 py-5">
-          <h1 className="text-xl font-bold text-white mb-0.5">Edit Resource</h1>
-          <p className="text-blue-200 text-sm">Update the details below</p>
+        <div className="relative z-10">
+          <Link
+            to={`/resources/${id}`}
+            className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors text-sm mb-4"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Resource
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-2xl"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+            >
+              {currentType?.icon || '📦'}
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-white">Edit Resource</h1>
+              <p className="text-blue-200 text-sm mt-0.5">
+                Update the details below
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-6">
-        <div className="space-y-5">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="p-6 space-y-5">
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                Resource Name <span className="text-red-400">*</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Resource Name <span className="text-red-500">*</span>
               </label>
-              <input name="name" className="input" value={form.name} onChange={handleFormChange} />
+              <input
+                name="name"
+                className="input"
+                value={form.name}
+                onChange={handleFormChange}
+              />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Type</label>
-              <select name="type" className="input" value={form.type} onChange={handleFormChange}>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Type
+              </label>
+              <select
+                name="type"
+                className="input"
+                value={form.type}
+                onChange={handleFormChange}
+              >
                 {Object.entries(RESOURCE_TYPES).map(([k, v]) => (
                   <option key={k} value={k}>{v.icon} {v.label}</option>
                 ))}
@@ -220,14 +309,29 @@ export default function EditResourcePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Location</label>
-              <input name="location" className="input" value={form.location} onChange={handleFormChange} />
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Location
+              </label>
+              <input
+                name="location"
+                className="input"
+                value={form.location}
+                onChange={handleFormChange}
+              />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Status</label>
-              <select name="status" className="input" value={form.status} onChange={handleFormChange}>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Status
+              </label>
+              <select
+                name="status"
+                className="input"
+                value={form.status}
+                onChange={handleFormChange}
+              >
                 <option value="AVAILABLE">Available</option>
                 <option value="MAINTENANCE">Maintenance</option>
                 <option value="UNAVAILABLE">Unavailable</option>
@@ -237,24 +341,50 @@ export default function EditResourcePage() {
 
           {form.type !== 'VEHICLE' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Capacity</label>
-              <input name="capacity" type="number" min="1" className="input"
-                value={form.capacity} onChange={handleFormChange} />
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Capacity
+              </label>
+              <input
+                name="capacity"
+                type="number"
+                min="1"
+                className="input"
+                value={form.capacity}
+                onChange={handleFormChange}
+              />
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Description</label>
-            <textarea name="description" className="input resize-none" rows={3}
-              value={form.description} onChange={handleFormChange} />
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Description
+            </label>
+            <textarea
+              name="description"
+              className="input resize-none"
+              rows={3}
+              value={form.description}
+              onChange={handleFormChange}
+            />
           </div>
 
           {currentType && (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
-              <h3 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>{currentType.icon}</span> {currentType.label} Details
-              </h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-lg">
+                  {currentType.icon}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800">
+                    {currentType.label} Details
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Update the resource-specific information
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentType.fields.map(field => (
                   <DetailsField
                     key={field.name}
@@ -268,10 +398,26 @@ export default function EditResourcePage() {
           )}
 
           <div className="flex gap-3 pt-2">
-            <button onClick={handleSubmit} disabled={loading} className="btn-primary flex-1 py-2.5">
-              {loading ? 'Saving...' : '✓ Save Changes'}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}
+            >
+              {loading ? (
+                <Spinner />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
-            <Link to={`/resources/${id}`} className="btn-secondary flex-1 text-center py-2.5">
+
+            <Link
+              to={`/resources/${id}`}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors text-center"
+            >
               Cancel
             </Link>
           </div>

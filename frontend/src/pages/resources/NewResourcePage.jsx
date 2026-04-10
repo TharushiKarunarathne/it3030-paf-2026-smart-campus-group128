@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { createResource } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
@@ -84,48 +84,73 @@ function buildEmptyDetails(type) {
   }, {})
 }
 
-function DetailsField({ field, value, onChange }) {
-  if (field.type === 'checkbox') return (
-    <label className="flex items-center gap-3 py-2 cursor-pointer group">
-      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center
-                       transition-colors
-                       ${value
-                         ? 'bg-indigo-600 border-indigo-600'
-                         : 'border-gray-300 group-hover:border-indigo-400'
-                       }`}>
-        {value && <span className="text-white text-xs">✓</span>}
-      </div>
-      <input
-        type="checkbox"
-        name={field.name}
-        checked={!!value}
-        onChange={onChange}
-        className="sr-only"
-      />
-      <span className="text-sm text-gray-700">{field.label}</span>
-    </label>
+function Spinner() {
+  return (
+    <svg
+      className="w-4 h-4"
+      style={{ animation: 'spin 0.8s linear infinite' }}
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
   )
+}
 
-  if (field.type === 'select') return (
-    <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">
-        {field.label}
+function DetailsField({ field, value, onChange }) {
+  if (field.type === 'checkbox') {
+    return (
+      <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-colors cursor-pointer">
+        <div
+          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+            value ? 'bg-blue-700 border-blue-700' : 'border-gray-300'
+          }`}
+        >
+          {value && (
+            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          )}
+        </div>
+        <input
+          type="checkbox"
+          name={field.name}
+          checked={!!value}
+          onChange={onChange}
+          className="sr-only"
+        />
+        <span className="text-sm font-medium text-gray-700">{field.label}</span>
       </label>
-      <select
-        name={field.name}
-        className="input"
-        value={value ?? ''}
-        onChange={onChange}
-      >
-        <option value="">Select...</option>
-        {field.options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  )
+    )
+  }
+
+  if (field.type === 'select') {
+    return (
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+          {field.label}
+        </label>
+        <select
+          name={field.name}
+          className="input"
+          value={value ?? ''}
+          onChange={onChange}
+        >
+          <option value="">Select...</option>
+          {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1.5">
+      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
         {field.label}
       </label>
       <input
@@ -141,11 +166,19 @@ function DetailsField({ field, value, onChange }) {
 }
 
 export default function NewResourcePage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const [created, setCreated] = useState(null)
+
   const [form, setForm] = useState({
-    name: '', type: 'LECTURE_HALL',
-    location: '', capacity: '', description: '', status: 'AVAILABLE',
+    name: '',
+    type: 'LECTURE_HALL',
+    location: '',
+    capacity: '',
+    description: '',
+    status: 'AVAILABLE',
   })
+
   const [details, setDetails] = useState(buildEmptyDetails('LECTURE_HALL'))
 
   const handleFormChange = (e) => {
@@ -163,89 +196,132 @@ export default function NewResourcePage() {
     setDetails(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-const [created, setCreated] = useState(null)
+  const handleSubmit = async () => {
+    if (!form.name || !form.type) {
+      toast.error('Name and type are required.')
+      return
+    }
 
-const handleSubmit = async () => {
-  if (!form.name || !form.type) {
-    toast.error('Name and type are required.')
-    return
+    try {
+      setLoading(true)
+      const { data } = await createResource({
+        ...form,
+        capacity: form.capacity ? parseInt(form.capacity) : null,
+        details,
+      })
+      toast.success('Resource created!')
+      setCreated(data)
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create resource.')
+    } finally {
+      setLoading(false)
+    }
   }
-  try {
-    setLoading(true)
-    const { data } = await createResource({
-      ...form,
-      capacity: form.capacity ? parseInt(form.capacity) : null,
-      details,
-    })
-    toast.success('Resource created!')
-    setCreated(data)
-  } catch (err) {
-    toast.error(err.response?.data?.error || 'Failed to create resource.')
-  } finally {
-    setLoading(false)
-  }
-}
 
   const currentType = RESOURCE_TYPES[form.type]
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Link to="/resources"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500
-                   hover:text-gray-800 transition-colors mb-6">
-        ← Back to Resources
-      </Link>
+    <div className="max-w-2xl mx-auto page-fade-in">
+      {/* Hero header */}
+      <div
+        className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
+        style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
+      >
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/3 translate-x-1/4 opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #60a5fa, transparent 70%)' }}
+        />
 
-      {/* Hero strip */}
-      <div className="rounded-t-2xl overflow-hidden"
-           style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}>
-        <div className="px-6 py-5">
-          <h1 className="text-xl font-bold text-white mb-0.5">Add New Resource</h1>
-          <p className="text-blue-200 text-sm">Fill in the details below</p>
+        <div className="relative z-10">
+          <button
+            onClick={() => navigate('/resources')}
+            className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors text-sm mb-4"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to tickets
+          </button>
+
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-2xl"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
+            >
+              {currentType?.icon || '📦'}
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold text-white">Add New Resource</h1>
+              <p className="text-blue-200 text-sm mt-0.5">
+                Fill in the details below
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Form */}
-      <div className="bg-white rounded-b-2xl border border-t-0 border-gray-100 px-6 py-6">
-        <div className="space-y-5">
-
-          {/* Name + Type row */}
-          <div className="grid grid-cols-2 gap-4">
+      {/* Form card */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="p-6 space-y-5">
+          {/* Name + Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                Resource Name <span className="text-red-400">*</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Resource Name <span className="text-red-500">*</span>
               </label>
               <input
-                name="name" className="input"
+                name="name"
+                className="input"
                 placeholder="e.g. Lecture Hall A101"
-                value={form.name} onChange={handleFormChange}
+                value={form.name}
+                onChange={handleFormChange}
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                Type <span className="text-red-400">*</span>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Type <span className="text-red-500">*</span>
               </label>
-              <select name="type" className="input" value={form.type} onChange={handleFormChange}>
+              <select
+                name="type"
+                className="input"
+                value={form.type}
+                onChange={handleFormChange}
+              >
                 {Object.entries(RESOURCE_TYPES).map(([k, v]) => (
-                  <option key={k} value={k}>{v.icon} {v.label}</option>
+                  <option key={k} value={k}>
+                    {v.icon} {v.label}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           {/* Location + Status */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Location</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Location
+              </label>
               <input
-                name="location" className="input"
+                name="location"
+                className="input"
                 placeholder="e.g. Block A, Near Main Entrance"
-                value={form.location} onChange={handleFormChange}
+                value={form.location}
+                onChange={handleFormChange}
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Status</label>
-              <select name="status" className="input" value={form.status} onChange={handleFormChange}>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Status
+              </label>
+              <select
+                name="status"
+                className="input"
+                value={form.status}
+                onChange={handleFormChange}
+              >
                 <option value="AVAILABLE">Available</option>
                 <option value="MAINTENANCE">Maintenance</option>
                 <option value="UNAVAILABLE">Unavailable</option>
@@ -253,38 +329,57 @@ const handleSubmit = async () => {
             </div>
           </div>
 
-          {/* Capacity — hide for vehicles */}
+          {/* Capacity */}
           {form.type !== 'VEHICLE' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Capacity (people)
               </label>
               <input
-                name="capacity" type="number" min="1" className="input"
+                name="capacity"
+                type="number"
+                min="1"
+                className="input"
                 placeholder="e.g. 50"
-                value={form.capacity} onChange={handleFormChange}
+                value={form.capacity}
+                onChange={handleFormChange}
               />
             </div>
           )}
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Description</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Description
+            </label>
             <textarea
-              name="description" className="input resize-none" rows={3}
+              name="description"
+              className="input resize-none"
+              rows={3}
               placeholder="Brief description of this resource..."
-              value={form.description} onChange={handleFormChange}
+              value={form.description}
+              onChange={handleFormChange}
             />
           </div>
 
-          {/* Type-specific fields */}
+          {/* Type specific fields */}
           {currentType && (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
-              <h3 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <span>{currentType.icon}</span>
-                {currentType.label} Details
-              </h3>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-lg">
+                  {currentType.icon}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800">
+                    {currentType.label} Details
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Additional information for this resource type
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentType.fields.map(field => (
                   <DetailsField
                     key={field.name}
@@ -297,56 +392,83 @@ const handleSubmit = async () => {
             </div>
           )}
 
-          {/* Buttons */}
-{created ? (
-  <div className="rounded-xl bg-green-50 border border-green-100 p-4 text-center">
-    <div className="text-2xl mb-2">✅</div>
-    <p className="text-sm font-semibold text-green-800 mb-1">
-      Resource created successfully!
-    </p>
-    <p className="text-xs text-green-600 mb-4">
-      {created.name} has been added to the system.
-    </p>
-    <div className="flex gap-3 justify-center">
-      <Link
-        to="/resources"
-        className="btn-primary text-sm px-5 py-2"
-      >
-        View all resources
-      </Link>
-      <Link
-        to={`/resources/${created.id}`}
-        className="btn-secondary text-sm px-5 py-2"
-      >
-        View this resource
-      </Link>
-      <button
-        onClick={() => {
-          setCreated(null)
-          setForm({ name: '', type: 'LECTURE_HALL', location: '', capacity: '', description: '', status: 'AVAILABLE' })
-          setDetails(buildEmptyDetails('LECTURE_HALL'))
-        }}
-        className="btn-secondary text-sm px-5 py-2"
-      >
-        Add another
-      </button>
-    </div>
-  </div>
-) : (
-  <div className="flex gap-3 pt-2">
-    <button
-      onClick={handleSubmit}
-      disabled={loading}
-      className="btn-primary flex-1 py-2.5"
-    >
-      {loading ? 'Creating...' : '✓ Create Resource'}
-    </button>
-    <Link to="/resources" className="btn-secondary flex-1 text-center py-2.5">
-      Cancel
-    </Link>
-  </div>
-)}
+          {/* Buttons / success */}
+          {created ? (
+            <div className="rounded-2xl border border-green-100 bg-green-50 p-6 text-center">
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center bg-green-100">
+                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
 
+              <p className="text-base font-bold text-green-800 mb-1">
+                Resource created successfully!
+              </p>
+              <p className="text-sm text-green-600 mb-5">
+                {created.name} has been added to the system.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  to="/resources"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity text-center"
+                  style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}
+                >
+                  View all resources
+                </Link>
+
+                <Link
+                  to={`/resources/${created.id}`}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors text-center"
+                >
+                  View this resource
+                </Link>
+
+                <button
+                  onClick={() => {
+                    setCreated(null)
+                    setForm({
+                      name: '',
+                      type: 'LECTURE_HALL',
+                      location: '',
+                      capacity: '',
+                      description: '',
+                      status: 'AVAILABLE'
+                    })
+                    setDetails(buildEmptyDetails('LECTURE_HALL'))
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  Add another
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+                style={{ background: 'linear-gradient(135deg, #1e3a5f, #2d5a8e)' }}
+              >
+                {loading ? (
+                  <Spinner />
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                )}
+                {loading ? 'Creating...' : 'Create Resource'}
+              </button>
+
+              <Link
+                to="/resources"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors text-center"
+              >
+                Cancel
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
