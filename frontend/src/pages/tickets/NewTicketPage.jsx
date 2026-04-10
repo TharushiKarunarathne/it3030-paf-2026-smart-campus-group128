@@ -28,6 +28,7 @@ const LOCATION_CONFIG = {
 
 const PRIORITY_DOT = { HIGH: 'bg-red-500', MEDIUM: 'bg-orange-400', LOW: 'bg-blue-500' }
 
+// ── Shared utility components ────────────────────────────────
 function Spinner() {
   return (
     <svg className="w-4 h-4" style={{ animation: 'spin 0.8s linear infinite' }}
@@ -56,6 +57,7 @@ export default function NewTicketPage() {
   const navigate = useNavigate()
   const { isTechnician } = useAuth()
 
+  // ── State ──────────────────────────────────────────────────
   // 'resource' | 'technical'
   const [ticketType, setTicketType] = useState('resource')
 
@@ -107,6 +109,7 @@ export default function NewTicketPage() {
     )
   }
 
+  // ── Event handlers ─────────────────────────────────────────
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
     setErrors((prev) => ({ ...prev, [e.target.name]: '' }))
@@ -142,6 +145,7 @@ export default function NewTicketPage() {
     setPreviews([])
   }
 
+  // ── Validation and submit ──────────────────────────────────
   const validate = () => {
     const errs = {}
     if (ticketType === 'resource') {
@@ -460,7 +464,7 @@ export default function NewTicketPage() {
   )
 }
 
-// ── Shared sub-components ──────────────────────────────────
+// ── Image upload sub-component ────────────────────────────────
 function ImageUpload({ images, previews, onChange, onRemove }) {
   const canAdd = images.length < 3
   return (
@@ -519,6 +523,7 @@ function ImageUpload({ images, previews, onChange, onRemove }) {
   )
 }
 
+// ── Priority guide sub-component ─────────────────────────────
 function PriorityGuide({ isTech }) {
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4 text-xs text-gray-500 space-y-2">

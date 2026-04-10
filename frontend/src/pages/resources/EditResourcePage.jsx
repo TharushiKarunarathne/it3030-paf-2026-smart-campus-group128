@@ -3,8 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getResourceById, updateResource } from '../../api/resourceApi'
 import toast from 'react-hot-toast'
 
-// Same RESOURCE_TYPES and DetailsField component as NewResourcePage — copy them here
-
+// ── Resource type definitions with per-type field config ─────
 const RESOURCE_TYPES = {
   LECTURE_HALL: {
     label: 'Lecture Hall', icon: '🏛️',
@@ -92,6 +91,7 @@ function Spinner() {
   )
 }
 
+// ── Details field sub-component ──────────────────────────────
 function DetailsField({ field, value, onChange }) {
   if (field.type === 'checkbox') return (
     <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-colors cursor-pointer">
@@ -158,7 +158,9 @@ function DetailsField({ field, value, onChange }) {
 export default function EditResourcePage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+
+  // ── State ──────────────────────────────────────────────────
+  const [loading, setLoading]   = useState(false)
   const [fetching, setFetching] = useState(true)
   const [form, setForm] = useState({
     name: '', type: 'LECTURE_HALL',
@@ -166,6 +168,7 @@ export default function EditResourcePage() {
   })
   const [details, setDetails] = useState({})
 
+  // ── Data fetching ───────────────────────────────────────────
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -189,6 +192,7 @@ export default function EditResourcePage() {
     fetch()
   }, [id, navigate])
 
+  // ── Event handlers and submit ───────────────────────────────
   const handleFormChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }

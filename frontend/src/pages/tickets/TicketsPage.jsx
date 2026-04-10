@@ -4,6 +4,7 @@ import { getTickets } from '../../api/ticketApi'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
+// ── Status and priority display config ───────────────────────
 const STATUS_CONFIG = {
   OPEN:        { label: 'Open',        dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200',       bar: 'bg-red-400' },
   IN_PROGRESS: { label: 'In Progress', dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-400' },
@@ -17,9 +18,11 @@ const PRIORITY_CONFIG = {
   HIGH:   { label: 'High',   dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700 border-red-200',        bar: 'bg-red-500' },
 }
 
+// ── Filter option lists ──────────────────────────────────────
 const STATUSES   = ['All', 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
 const CATEGORIES = ['All', 'Lecture Halls', 'Computer Labs', 'Vehicles', 'Sports', 'Meeting Rooms', 'Library']
 
+// ── Utility functions ────────────────────────────────────────
 function timeAgo(dateStr) {
   if (!dateStr) return ''
   const diff  = Date.now() - new Date(dateStr).getTime()
@@ -45,6 +48,7 @@ export default function TicketsPage() {
   const isUser = !isAdmin && !isTechnician
   const [searchParams] = useSearchParams()
 
+  // ── State ────────────────────────────────────────────────
   const [tickets, setTickets]         = useState([])
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
@@ -54,6 +58,7 @@ export default function TicketsPage() {
 
   useEffect(() => { fetchTickets() }, [])
 
+  // ── Data fetching ────────────────────────────────────────
   const fetchTickets = async () => {
     try {
       setLoading(true)
@@ -71,6 +76,7 @@ export default function TicketsPage() {
     }
   }
 
+  // ── Client-side filtering ────────────────────────────────
   const filtered = tickets.filter((t) => {
     const matchSearch   = t.title?.toLowerCase().includes(search.toLowerCase()) ||
                           t.location?.toLowerCase().includes(search.toLowerCase())
@@ -80,6 +86,7 @@ export default function TicketsPage() {
     return matchSearch && matchStatus && matchCategory && matchPriority
   })
 
+  // ── Per-status counts for stats row and tab badges ───────
   const counts = {
     OPEN:        tickets.filter(t => t.status === 'OPEN').length,
     IN_PROGRESS: tickets.filter(t => t.status === 'IN_PROGRESS').length,

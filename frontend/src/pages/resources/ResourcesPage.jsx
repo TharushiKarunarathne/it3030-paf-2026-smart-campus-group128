@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import ComparePanel from '../../components/resources/ComparePanel'
 import SmartCalendar from '../../components/resources/SmartCalendar'
 
+// ── Resource type and status display config ──────────────────
 const TYPE_CONFIG = {
   LECTURE_HALL:       { label: 'Lecture Hall',       icon: '🏛️', color: 'bg-blue-50 text-blue-600',    accent: 'bg-blue-500' },
   COMPUTER_LAB:       { label: 'Computer Lab',       icon: '🖥️', color: 'bg-purple-50 text-purple-600', accent: 'bg-purple-500' },
@@ -21,6 +22,7 @@ const STATUS_CONFIG = {
   UNAVAILABLE: { label: 'Unavailable', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-700' },
 }
 
+// ── Filter pill options ──────────────────────────────────────
 const TYPE_FILTERS = [
   { key: 'ALL', label: 'All' },
   { key: 'LECTURE_HALL',       label: 'Lecture Halls' },
@@ -31,6 +33,7 @@ const TYPE_FILTERS = [
   { key: 'LIBRARY_STUDY_ROOM', label: 'Library' },
 ]
 
+// ── Resource card sub-component ──────────────────────────────
 function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, isInCompare, compareList, toggleCompare }) {  const type   = TYPE_CONFIG[resource.type]   ?? { label: resource.type,   icon: '📦', color: 'bg-gray-50 text-gray-600',   accent: 'bg-gray-400' }
   const status = STATUS_CONFIG[resource.status] ?? { label: resource.status, dot: 'bg-gray-400', badge: 'bg-gray-50 text-gray-600' }
 
@@ -174,6 +177,7 @@ function ResourceCard({ resource, isAdmin, onDelete, onStatusChange, isInCompare
   )
 }
 
+// ── Confirm delete dialog ────────────────────────────────────
 function ConfirmDialog({ message, subMessage, confirmLabel = 'Delete', onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -208,6 +212,8 @@ function ConfirmDialog({ message, subMessage, confirmLabel = 'Delete', onConfirm
 
 export default function ResourcesPage() {
   const { isAdmin }  = useAuth()
+
+  // ── State ─────────────────────────────────────────────────
   const [resources, setResources]       = useState([])
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
@@ -218,6 +224,7 @@ export default function ResourcesPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
 
+  // ── Compare handlers ──────────────────────────────────────
   const toggleCompare = (resource) => {
   setCompareList(prev => {
     const exists = prev.find(r => r.id === resource.id)
@@ -255,6 +262,7 @@ export default function ResourcesPage() {
     setShowCompare(false)
   }
 
+  // ── Data fetching ─────────────────────────────────────────
   useEffect(() => { fetchResources() }, [])
 
   const fetchResources = async () => {
@@ -270,6 +278,7 @@ export default function ResourcesPage() {
     }
   }
 
+  // ── Delete and status handlers ────────────────────────────
   const handleDelete = (id) => setPendingDeleteId(id)
 
   const confirmDelete = async () => {
@@ -290,6 +299,7 @@ export default function ResourcesPage() {
     } catch { toast.error('Failed to update status.') }
   }
 
+  // ── Client-side filtering ─────────────────────────────────
   const filtered = resources.filter(r => {
     const matchSearch = !search ||
       r.name?.toLowerCase().includes(search.toLowerCase()) ||

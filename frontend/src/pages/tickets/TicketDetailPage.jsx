@@ -13,6 +13,7 @@ import { getAllUsers } from '../../api/authApi'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
+// ── Status and priority display config ───────────────────────
 const STATUS_STYLES = {
   OPEN:        { dot: 'bg-red-500',    border: 'border-red-400',    bg: 'bg-red-50',     text: 'text-red-700',    badge: 'bg-red-50 text-red-700 border-red-200',       label: 'Open' },
   IN_PROGRESS: { dot: 'bg-yellow-500', border: 'border-yellow-400', bg: 'bg-yellow-50',  text: 'text-yellow-700', badge: 'bg-yellow-50 text-yellow-700 border-yellow-200', label: 'In Progress' },
@@ -33,6 +34,7 @@ const STATUS_TRANSITIONS = {
   CLOSED:      ['OPEN'],
 }
 
+// ── Utility functions ────────────────────────────────────────
 function formatDate(dateStr) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleString('en-GB', {
@@ -198,6 +200,7 @@ export default function TicketDetailPage() {
   const { user, isAdmin, isTechnician } = useAuth()
   const isUser = !isAdmin && !isTechnician
 
+  // ── State ──────────────────────────────────────────────────
   const [ticket, setTicket]                     = useState(null)
   const [technicians, setTechnicians]           = useState([])
   const [loading, setLoading]                   = useState(true)
@@ -206,7 +209,7 @@ export default function TicketDetailPage() {
   const [statusLoading, setStatusLoading]       = useState(false)
   const [assignLoading, setAssignLoading]       = useState(false)
   const [resolveLoading, setResolveLoading]     = useState(false)
-  const [imageExpanded, setImageExpanded]       = useState(null) // stores URL of expanded image
+  const [imageExpanded, setImageExpanded]       = useState(null)
   const [showResolveModal, setShowResolveModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -215,6 +218,7 @@ export default function TicketDetailPage() {
     if (isAdmin) fetchTechnicians()
   }, [id])
 
+  // ── Data fetching ───────────────────────────────────────────
   const fetchTicket = async () => {
     try {
       setLoading(true)
@@ -235,6 +239,7 @@ export default function TicketDetailPage() {
     } catch {}
   }
 
+  // ── Event handlers ──────────────────────────────────────────
   const handleStatusChange = async (newStatus) => {
     if (newStatus === 'RESOLVED') { setShowResolveModal(true); return }
     try {
