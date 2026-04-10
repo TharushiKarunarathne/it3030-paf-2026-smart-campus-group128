@@ -4,12 +4,16 @@ import { getResourceById, deleteResource, updateResourceStatus } from '../../api
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
 
+// Status style mapping object.
+// Used to apply different badge colors based on the current resource status.
 const STATUS_STYLE = {
   AVAILABLE:   'bg-green-100 text-green-700',
   MAINTENANCE: 'bg-yellow-100 text-yellow-700',
   UNAVAILABLE: 'bg-red-100 text-red-700',
 }
 
+// Resource type icon mapping object.
+// Displays a matching icon for each resource category.
 const TYPE_ICON = {
   ROOM:      '🏛️',
   EQUIPMENT: '🎥',
@@ -17,6 +21,8 @@ const TYPE_ICON = {
   LAB:       '🖥️',
 }
 
+// Reusable loading spinner component.
+// Displayed while resource data is being loaded.
 function Spinner() {
   return (
     <svg
@@ -31,6 +37,8 @@ function Spinner() {
   )
 }
 
+// Reusable confirmation dialog component.
+// Used when the admin tries to delete a resource.
 function ConfirmDialog({ message, subMessage, confirmLabel = 'Delete', onConfirm, onCancel }) {
   return (
     <div
@@ -72,6 +80,8 @@ function ConfirmDialog({ message, subMessage, confirmLabel = 'Delete', onConfirm
   )
 }
 
+// Main page component for displaying full resource details.
+// Handles loading resource data, deleting the resource, and updating its status.
 export default function ResourceDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -80,6 +90,8 @@ export default function ResourceDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Loads resource details when the page opens.
+  // If the resource is not found, shows an error message and redirects back.
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -95,8 +107,11 @@ export default function ResourceDetailPage() {
     fetch()
   }, [id, navigate])
 
+  // Opens the delete confirmation dialog.
   const handleDelete = () => setShowDeleteConfirm(true)
 
+  // Confirms deletion of the selected resource.
+  // After deleting successfully, redirects back to the resources page.
   const confirmDelete = async () => {
     setShowDeleteConfirm(false)
     try {
@@ -108,6 +123,8 @@ export default function ResourceDetailPage() {
     }
   }
 
+  // Updates the current resource status.
+  // Also updates the local UI state after a successful change.
   const handleStatusChange = async (status) => {
     try {
       await updateResourceStatus(id, status)
@@ -118,6 +135,7 @@ export default function ResourceDetailPage() {
     }
   }
 
+  // Loading state UI shown while fetching resource details.
   if (loading) return (
     <div className="max-w-2xl mx-auto page-fade-in">
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -134,10 +152,12 @@ export default function ResourceDetailPage() {
     </div>
   )
 
+  // If no resource is found after loading, render nothing.
   if (!resource) return null
 
   return (
     <div className="max-w-2xl mx-auto page-fade-in">
+      {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <ConfirmDialog
           message="Delete this resource permanently?"
@@ -148,7 +168,7 @@ export default function ResourceDetailPage() {
         />
       )}
 
-      {/* Hero header */}
+      {/* Page header / hero section */}
       <div
         className="relative overflow-hidden rounded-2xl px-8 py-7 mb-6"
         style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 60%, #1a4a7a 100%)' }}
@@ -192,10 +212,10 @@ export default function ResourceDetailPage() {
         </div>
       </div>
 
-      {/* Main details card */}
+      {/* Main resource details card */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-5">
         <div className="p-6">
-          {/* Info grid */}
+          {/* Basic information section */}
           {(resource.location || resource.capacity || resource.building) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {resource.location && (
@@ -221,7 +241,7 @@ export default function ResourceDetailPage() {
             </div>
           )}
 
-          {/* Type-specific details */}
+          {/* Type-specific details section */}
           {resource.details && Object.keys(resource.details).length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
@@ -238,6 +258,7 @@ export default function ResourceDetailPage() {
                 {Object.entries(resource.details).map(([key, value]) => {
                   if (value === '' || value === null) return null
 
+                  // Converts camelCase detail keys into readable labels.
                   const label = key
                     .replace(/([A-Z])/g, ' $1')
                     .replace(/^./, s => s.toUpperCase())
@@ -265,7 +286,7 @@ export default function ResourceDetailPage() {
             </div>
           )}
 
-          {/* Description */}
+          {/* Resource description section */}
           {resource.description && (
             <div className="mb-6">
               <h2 className="text-sm font-bold text-gray-800 mb-2">Description</h2>
@@ -275,7 +296,7 @@ export default function ResourceDetailPage() {
             </div>
           )}
 
-          {/* Action buttons */}
+          {/* User action buttons section */}
           <div className="flex gap-3">
             {resource.status === 'AVAILABLE' && (
               <Link
@@ -304,7 +325,7 @@ export default function ResourceDetailPage() {
         </div>
       </div>
 
-      {/* Admin controls */}
+      {/* Admin-only controls section */}
       {isAdmin && (
         <div className="bg-white rounded-2xl border border-orange-100 overflow-hidden">
           <div className="p-6">
@@ -319,6 +340,7 @@ export default function ResourceDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
+              {/* Status update control */}
               <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
                 <label className="text-xs font-medium text-gray-600">Change status:</label>
                 <select
@@ -332,6 +354,7 @@ export default function ResourceDetailPage() {
                 </select>
               </div>
 
+              {/* Edit resource button */}
               <Link
                 to={`/resources/${resource.id}/edit`}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -339,6 +362,7 @@ export default function ResourceDetailPage() {
                 ✏️ Edit resource
               </Link>
 
+              {/* Delete resource button */}
               <button
                 onClick={handleDelete}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
