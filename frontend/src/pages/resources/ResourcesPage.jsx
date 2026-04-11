@@ -414,7 +414,7 @@ export default function ResourcesPage() {
         Showing {filtered.length} of {resources.length} resources
       </p>
 
-      {/* ── Main layout: resources + optional calendar sidebar ── */}
+      {/* Main layout: resources + optional calendar sidebar  */}
       <div className={calendarOpen ? 'grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5 items-start' : ''}>
       <div>
 
@@ -478,7 +478,7 @@ export default function ResourcesPage() {
   />
 )}
 
-      {/* ── Grid ─────────────────────────────────────── */}
+      {/*  Grid  */}
       {loading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
@@ -518,7 +518,7 @@ export default function ResourcesPage() {
 
       </div>{/* end resources inner div */}
 
-      {/* ── Calendar sidebar ── */}
+      {/* Calendar sidebar  */}
       {calendarOpen && (
         <div className="xl:sticky xl:top-4">
           <SmartCalendar />

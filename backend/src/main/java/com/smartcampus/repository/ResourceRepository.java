@@ -21,7 +21,7 @@ public interface ResourceRepository extends MongoRepository<Resource, String> {
         Resource.ResourceStatus status
     );
 
-    // Search by name containing keyword (case insensitive)
+    // Search by name containing keyword
     List<Resource> findByNameContainingIgnoreCase(String keyword);
 
     // Check if name already exists
